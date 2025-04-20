@@ -168,7 +168,3 @@ class ActorCriticAgent:
         # Return the observed trajectory
         #
         return trajectory
-
-
-
-
