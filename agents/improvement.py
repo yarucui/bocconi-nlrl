@@ -1,6 +1,8 @@
+# Internal import
+from models.model import LanguageModel
 
 class ImprovementOperator:
-    def __init__(self):
+    def __init__(self, llm : LanguageModel, config : str):
         pass
 
     #

@@ -1,33 +1,39 @@
-# Internal imports
-from models.model import LanguageModel
-
 # External imports
+import json
 from pathlib import Path
 import re
 
+# Internal imports
+from models.model import LanguageModel
+
 class LanguagePolicy:
 
-    def __init__(self, system_prompt_file : str, user_prompt_file : str, llm : LanguageModel):
+    def __init__(self, llm : LanguageModel, config : str):
         #
         # LLM to query for actions
         #
         self.llm = llm
         #
+        #
+        #
+        with open(config, 'r') as file:
+            self.config = json.load(file)
+        #
         # Read the prompts from the files
         #
-        self.system_prompt = Path(system_prompt_file).read_text(encoding='utf-8')
-        self.user_prompt = Path(user_prompt_file).read_text(encoding='utf-8')        
+        self.system_prompt = Path(self.config['system_prompt_file']).read_text(encoding='utf-8')
+        self.user_prompt = Path(self.config['user_prompt_file']).read_text(encoding='utf-8')    
 
     #
     # Given a state, select an action from a set of possible actions.
     #
     #    Example input - Maze
     #
-    #       state = """ .....
-    #                   .o  .
-    #                   .   .
-    #                   .  x.
-    #                   .....
+    #       state = """ #####
+    #                   #o  #
+    #                   #   #
+    #                   #  x#
+    #                   #####
     #               """
     #
     #       actions = {0: "Move up", 1: "Move down", 2: "Move right", 3: "Move left"}
@@ -37,7 +43,7 @@ class LanguagePolicy:
         # Query the LLM with the given state and actions
         #
         response = self.llm.generate_response(self.system_prompt, 
-                                              self.user_prompt.format(state, actions))
+                                              self.user_prompt.format(state=state, actions=actions))
         #
         # Extract the action from the LLM response
         #

@@ -1,31 +1,38 @@
 # External imports
 from collections import Counter
+import json
 import numpy as  np
+from pathlib import Path
 
 # Internal imports
-from language_policy import LanguagePolicy
-from language_value_function import LanguageValueFunction
-from improvement import ImprovementOperator
 from envs.environment import Environment
-
+from agents.improvement import ImprovementOperator
+from agents.language_policy import LanguagePolicy
+from agents.language_value_function import LanguageValueFunction
+from models.model import LanguageModel
 
 class ActorCriticAgent:
 
-    def __init__(self, env : Environment, task_instruction : str):
+    def __init__(self, env : Environment, llm : LanguageModel, agent_config_file : str):
         #
         # Environment
         #
         self.env = env
         #
+        # Read agent configuration file
+        #
+        with open(agent_config_file, 'r') as file:
+            self.config = json.load(file)
+        #
         # Text describing the task to be accomplished.
         #
-        self.task_instruction = task_instruction
+        self.task_instruction = Path(self.config['task_instruction_file']).read_text(encoding='utf-8')
         #
         # Core components
         #
-        self.lang_policy = LanguagePolicy()
-        self.lang_values = LanguageValueFunction()
-        self.improvement_op = ImprovementOperator()
+        self.lang_policy = LanguagePolicy(llm, self.config['policy_config'])
+        self.lang_values = LanguageValueFunction(llm, self.config['values_config'])
+        self.improvement_op = ImprovementOperator(llm, self.config['improvement_config'])
     
     #
     # Main actor-critic training loop
@@ -61,14 +68,11 @@ class ActorCriticAgent:
             # Collect trajectories
             #
             trajectories = [] # [[(s, a, r, s'), ..], ...]
-            for traj_iter in range(N):
-                #
-                # Initialize the environment to its starting state
-                #
-                self.env.reset()
+            for _ in range(N):
                 #
                 # Rollout the state to completion
                 #
+                #import ipdb; ipdb.set_trace()
                 trajectories.append(self.rollout())
             #
             # Build value estimation targets
@@ -140,6 +144,10 @@ class ActorCriticAgent:
     #
     def rollout(self):
         #
+        # Initialize the environment to its starting state
+        #
+        self.env.reset()
+        #
         # Store the observed transitions
         #
         trajectory = []
@@ -150,11 +158,15 @@ class ActorCriticAgent:
             #
             # Get the current state
             #
-            current_state = self.env
+            current_state = self.env.state
+            #
+            # Get the set of actions available in the current state
+            #
+            actions = self.env.actions()
             #
             # Get an action from our policy given the current state
             #
-            action = self.lang_policy.get_action(current_state)
+            action = self.lang_policy.get_action(current_state, actions)
             #
             # Apply the action to the environment to collect a
             # reward and the next state.

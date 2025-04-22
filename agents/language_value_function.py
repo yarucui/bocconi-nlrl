@@ -1,7 +1,8 @@
-
+# Internal import
+from models.model import LanguageModel
 
 class LanguageValueFunction:
-    def __init__(self):
+    def __init__(self, llm : LanguageModel, config : str):
         pass
 
     #

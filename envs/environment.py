@@ -6,6 +6,12 @@ class Environment:
         self.state = None
 
     #
+    # Reset the environment to its initial state
+    #
+    def reset(self):
+        pass
+    
+    #
     # Return a list of all valid actions in the environment
     #
     def actions(self) -> list:
@@ -22,5 +28,5 @@ class Environment:
     # Apply the given action in the environment,
     # return the resulting next state and the reward gained.
     #
-    def act(action):
+    def act(self, action_id):
         pass

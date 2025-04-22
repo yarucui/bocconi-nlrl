@@ -1,0 +1,6 @@
+Maze:
+{state}
+
+Available actions: {actions}
+
+Choose an action.

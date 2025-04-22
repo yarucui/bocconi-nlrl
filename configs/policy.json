@@ -1,0 +1,4 @@
+{
+    "system_prompt_file": "prompts/policy/system_prompt.txt",
+    "user_prompt_file": "prompts/policy/user_prompt.txt"
+}
