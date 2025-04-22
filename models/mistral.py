@@ -67,8 +67,12 @@ class Mistral(LanguageModel):
             **self.config['generate']
         )
         #
+        # Seperate the response from the instruction
+        #
+        full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        response = full_response.split('[/INST] ')[1]
+        #
         # Return the response
         #
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         return response
 

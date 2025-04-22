@@ -72,7 +72,7 @@ class ActorCriticAgent:
                 #
                 # Rollout the state to completion
                 #
-                #import ipdb; ipdb.set_trace()
+                import ipdb; ipdb.set_trace()
                 trajectories.append(self.rollout())
             #
             # Build value estimation targets
@@ -142,7 +142,7 @@ class ActorCriticAgent:
     # Use the agent's policy to rollout the environment
     # state to completion. Return the observed trajectory.
     #
-    def rollout(self):
+    def rollout(self, max_trajectory_length=5):
         #
         # Initialize the environment to its starting state
         #
@@ -154,7 +154,7 @@ class ActorCriticAgent:
         #
         # Continue to act until the game terminates.
         #
-        while not self.env.is_terminal():
+        while not self.env.is_terminal() and len(trajectory) < max_trajectory_length:
             #
             # Get the current state
             #

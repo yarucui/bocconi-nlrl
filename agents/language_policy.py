@@ -47,11 +47,11 @@ class LanguagePolicy:
         #
         # Extract the action from the LLM response
         #
-        match = re.search(r'Best action:\s*\d+', response)
+        match = re.search(r'Best action:\s*(\d+)', response)
         if match:
             action = int(match.group(1))
         else:
-            raise ValueError(f"Policy LLM returned an ill-formatted response. Response:\n{response}")
+            raise ValueError(f"Policy LLM returned an ill-formatted response. Response:\n'{response}'")
         #
         # Check that the selected action is in the given set of possible actions.
         #
