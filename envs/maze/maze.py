@@ -127,6 +127,7 @@ class MazeEnv(Environment):
     #       it is treated as no action and the player stays in place.
     #
     def act(self, action_id : int) -> tuple[str, int]:
+        import ipdb; ipdb.set_trace()
         #
         # Check that the game is not over.
         #

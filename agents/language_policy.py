@@ -25,7 +25,8 @@ class LanguagePolicy:
         self.user_prompt = Path(self.config['user_prompt_file']).read_text(encoding='utf-8')    
 
     #
-    # Given a state, select an action from a set of possible actions.
+    # Given a state, return an action from a set of possible actions and
+    # a string explaining the reasoning.
     #
     #    Example input - Maze
     #
@@ -38,20 +39,52 @@ class LanguagePolicy:
     #
     #       actions = {0: "Move up", 1: "Move down", 2: "Move right", 3: "Move left"}
     #
-    def get_action(self, state : str, actions : dict) -> int:
+    #     Example output - Maze
+    #
+    #         action = 3
+    #
+    #         reason = """
+    #           The player is currently standing next to a free space on the right side of 
+    #           the maze. The goal square is also located on the right side of the maze. 
+    #           Therefore, the best action for the player is to move right, as it will 
+    #           bring them closer to the goal square and allow them to explore more of 
+    #           the maze.
+    #         """
+    #
+    def get_action(self, state : str, actions : dict) -> tuple[int, str]:
         #
         # Query the LLM with the given state and actions
         #
         response = self.llm.generate_response(self.system_prompt, 
                                               self.user_prompt.format(state=state, actions=actions))
         #
+        # Log
+        #
+        print('-------------------')
+        print('Input state:')
+        print(state)
+        print()
+        print('Language policy response:')
+        print(response)
+        print()
+        #
         # Extract the action from the LLM response
         #
-        match = re.search(r'Best action:\s*(\d+)', response)
-        if match:
-            action = int(match.group(1))
+        action_match = re.search(r'Best action:\s*(\d+)', response)
+        if action_match:
+            action = int(action_match.group(1))
         else:
-            raise ValueError(f"Policy LLM returned an ill-formatted response. Response:\n'{response}'")
+            raise ValueError(f"Missing action. Policy LLM returned an ill-formatted response. Response:\n'{response}'")
+        #
+        # Extract the reasoning
+        #
+        # The reasoning should always follow the reason identifier, "Reason: "
+        #
+        reason_match = re.search(r"Reason:\s*\n?(.*)", response, re.DOTALL)
+        if reason_match:
+            reason =  str(reason_match.group(1))
+        else:
+            raise ValueError(f"Missing reasoning. Policy LLM return an ill-formatted response. Response:\n'{response}'")
         #
         # Check that the selected action is in the given set of possible actions.
         #
@@ -59,7 +92,8 @@ class LanguagePolicy:
         #
         # Otherwise, the selected action is valid.
         #
-        return action
+        import ipdb; ipdb.set_trace()
+        return action, reason
 
     #
     # Given a batch of policy targets, update the policy.

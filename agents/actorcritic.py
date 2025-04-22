@@ -59,6 +59,8 @@ class ActorCriticAgent:
         #
         # Store trajectories
         #
+        #   Note: In the NLRL paper, this is called the 'replay_buffer'
+        #
         value_buffer = [] # [(train_idx, (s, a, v), ...]
         #
         # Main training loop
@@ -74,6 +76,7 @@ class ActorCriticAgent:
                 #
                 import ipdb; ipdb.set_trace()
                 trajectories.append(self.rollout())
+            import ipdb; ipdb.set_trace()
             #
             # Build value estimation targets
             #
@@ -107,7 +110,7 @@ class ActorCriticAgent:
                     # Recall - the language policy does not directly assign a probability 
                     #          distribution over the action space.
                     #
-                    sampled_actions = [self.lang_policy.get_action(state) for _ in range(N_ACTION_SAMPLES)]
+                    sampled_actions = [self.lang_policy.get_action(state)[0] for _ in range(N_ACTION_SAMPLES)]
                     #
                     # Get the top N most frequent actions
                     #
@@ -153,6 +156,7 @@ class ActorCriticAgent:
         trajectory = []
         #
         # Continue to act until the game terminates.
+        # Or we hit the maximum allowed trajectory length
         #
         while not self.env.is_terminal() and len(trajectory) < max_trajectory_length:
             #
@@ -166,7 +170,7 @@ class ActorCriticAgent:
             #
             # Get an action from our policy given the current state
             #
-            action = self.lang_policy.get_action(current_state, actions)
+            action = self.lang_policy.get_action(current_state, actions)[0]
             #
             # Apply the action to the environment to collect a
             # reward and the next state.

@@ -5,7 +5,9 @@ The avaiable actions will come as a python dictionary. The dictionary keys will 
 action ids and the dictionary values will be the description of the action.
 
 Always respond with "Best action: {action id}" where {action id} is the action 
-you think is best from the dictionary of available actions.
+you think is best from the dictionary of available actions. Then on a newline, 
+write "Reason: {reason}" where {reason} is your justification for the action you 
+chose by explaining your thought process.
 
 '#' characters in the maze represent walls.
 ' ' characters in the maze represent free space the player can move into.
