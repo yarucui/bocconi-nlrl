@@ -14,7 +14,7 @@ class LanguagePolicy:
         #
         self.llm = llm
         #
-        #
+        # Get the language policy's configuration parameters
         #
         with open(config, 'r') as file:
             self.config = json.load(file)
@@ -61,11 +61,10 @@ class LanguagePolicy:
         # Log
         #
         print('-------------------')
+        print('--> LLM Policy')
+        print()
         print('Input state:')
         print(state)
-        print()
-        print('Language policy response:')
-        print(response)
         print()
         #
         # Extract the action from the LLM response
@@ -90,9 +89,16 @@ class LanguagePolicy:
         #
         assert action in actions.keys(), f"Policy LLM selected an invalid action. Got {action}. Expected one of these {actions}"
         #
+        # Log
+        #
+        print('Action:', actions[action])
+        print()
+        print('Reason:')
+        print(reason)
+        print()
+        #
         # Otherwise, the selected action is valid.
         #
-        import ipdb; ipdb.set_trace()
         return action, reason
 
     #

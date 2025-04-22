@@ -43,25 +43,24 @@ class ActorCriticAgent:
         #
         # Training hyperparameters
         #
-        #   - N_ESTIMATE_SAMPLES - num. of sampled transitions to estimate state-action value
+        #   - N_ESTIMATE_SAMPLES - num. of sampled trajectories to estimate the state-action value
         #   - N_ACTION_SAMPLES - num. of actions to sample to estimate policy action probability
         #   - TOP_N_ACTIONS - select top N most probable actions to perform the policy update.
         #   - VALUE_BATCH_SIZE - num. of value targets to use per training iteration
         #   - POLICY_BATCH_SIZE - num. of policy targets to use per training iteration
         #   - KEEP_N_ITER_HISTORY - num. of training iterations until a target is evicted from its buffer.
         #
-        N_ESTIMATE_SAMPLES = 5
+        N_ESTIMATE_SAMPLES = 1
         N_ACTION_SAMPLES = 4
         TOP_N_ACTIONS = 4
         VALUE_BATCH_SIZE = 1
         POLICY_BATCH_SIZE = 1
         KEEP_N_ITER_HISTORY = 1
         #
-        # Store trajectories
+        # Store value targets and policy targets
         #
-        #   Note: In the NLRL paper, this is called the 'replay_buffer'
-        #
-        value_buffer = [] # [(train_idx, (s, a, v), ...]
+        value_buffer = []  # [(train_idx, (s, a, v), ...]
+        policy_buffer = [] # [(train_idx, (s, policy target, strategic reasoning), ...]
         #
         # Main training loop
         #
@@ -69,27 +68,66 @@ class ActorCriticAgent:
             #
             # Collect trajectories
             #
-            trajectories = [] # [[(s, a, r, s'), ..], ...]
+            print('+++++++++++++++++++++++++++++')
+            print('STEP 1: COLLECT TRAJECTORIES')
+            trajectories = [] # [[(s, a, r), ..], ...]
             for _ in range(N):
+                #
+                # Initialize the environment to its starting state
+                #
+                self.env.reset()
                 #
                 # Rollout the state to completion
                 #
-                import ipdb; ipdb.set_trace()
                 trajectories.append(self.rollout())
-            import ipdb; ipdb.set_trace()
             #
             # Build value estimation targets
             #
             #    Compute value estimates for each state-action
             #    pair that was observed during rollouts.
             #
+            print('+++++++++++++++++++++++++++++')
+            print('STEP 2: COMPUTE VALUE TARGETS')
             value_targets = [] # [(s, a, v), ...]
             for trajectory in trajectories:
                 for transition in trajectory:
                     state, action = transition[0], transition[1]
-                    value = self.lang_values.mc_estimate(state, action, N_ESTIMATE_SAMPLES)
+                    #
+                    # For Monte-Carlo estimates, we evaluate the state-action
+                    # pair using a set of sample trajectories.
+                    #
+                    sample_trajectories = []
+                    for _ in range(N_ESTIMATE_SAMPLES):
+                        #
+                        # Set the environment to the given state
+                        #
+                        self.env.set_state(state)
+                        #
+                        # Start by applying the action in the state
+                        #
+                        _, reward = self.env.act(action)
+                        #
+                        # Combine this with the rest of the rollout
+                        # to sample the rest of the trajectory.
+                        #
+                        sample_trajectories.append([(state, action, reward)] + self.rollout())
+                    #
+                    # Given the example trajectories, evaluate how good or bad
+                    # taking the action is in this state.
+                    #
+                    value = self.lang_values.mc_estimate(state, 
+                                                         action, 
+                                                         self.env.actions(), 
+                                                         sample_trajectories)
+                    #
+                    # Save the result.
+                    #
                     value_targets.append((train_idx, (state, action, value)))
+            #
+            # Save the value targets from this training iteration to the value buffer.
+            #
             value_buffer.append(value_targets)
+            import ipdb; ipdb.set_trace()
             #
             # Update the value function using the value targets
             #
@@ -99,7 +137,6 @@ class ActorCriticAgent:
             #
             # Use the updated value function to improve the policy
             #
-            policy_buffer = []
             for trajectory in trajectories:
                 for transition in trajectory:
                     state = transition[0]
@@ -147,10 +184,6 @@ class ActorCriticAgent:
     #
     def rollout(self, max_trajectory_length=5):
         #
-        # Initialize the environment to its starting state
-        #
-        self.env.reset()
-        #
         # Store the observed transitions
         #
         trajectory = []
@@ -175,11 +208,11 @@ class ActorCriticAgent:
             # Apply the action to the environment to collect a
             # reward and the next state.
             #
-            next_state, reward = self.env.act(action)
+            _, reward = self.env.act(action)
             #
             # Store the transition
             #
-            trajectory.append((current_state, action, reward, next_state))
+            trajectory.append((current_state, action, reward))
         #
         # Return the observed trajectory
         #

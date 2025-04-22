@@ -1,0 +1,8 @@
+The given state:
+{state}
+
+The action to evaluate in this state is to {action}.
+
+Given the following example actions that the player takes in subsequent states.
+
+{examples}

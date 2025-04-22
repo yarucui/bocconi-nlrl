@@ -34,7 +34,7 @@ class MazeEnv(Environment):
         #
         # Set of actions
         #
-        self.action_set = {0: 'Move up', 1: 'Move down', 2: 'Move left', 3: 'Move right'}
+        self.action_set = {0: 'move up', 1: 'move down', 2: 'move left', 3: 'move right'}
         #
         # Movements associated with each action
         #
@@ -61,13 +61,22 @@ class MazeEnv(Environment):
     #
     def reset(self):
         #
-        # Maze is not over since we are reseting to the beginning.
-        #
-        self.terminated = False
-        #
         # Read the initial game state from the board file.
         #
-        self.state = Path(self.board_file).read_text(encoding='utf-8')
+        starting_state = Path(self.board_file).read_text(encoding='utf-8')
+        #
+        # Set the environment to its starting state
+        #
+        self.set_state(starting_state)
+
+    #
+    # Given a state, set the environment to that state.
+    #
+    def set_state(self, state : str) -> None:
+        #
+        # Set the environment state
+        #
+        self.state = state
         #
         # Build the grid
         #
@@ -105,6 +114,10 @@ class MazeEnv(Environment):
         #
         assert self.player_position is not None, "Player not found in input board."
         assert self.goal_char is not None, "Goal not found in input board."
+        #
+        # Maze is not over since we are reseting to a state.
+        #
+        self.terminated = False
 
     #
     # Return a list of all valid actions in the environment
@@ -127,7 +140,6 @@ class MazeEnv(Environment):
     #       it is treated as no action and the player stays in place.
     #
     def act(self, action_id : int) -> tuple[str, int]:
-        import ipdb; ipdb.set_trace()
         #
         # Check that the game is not over.
         #

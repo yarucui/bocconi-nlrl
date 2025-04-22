@@ -64,7 +64,8 @@ class Mistral(LanguageModel):
         #
         outputs = self.model.generate(
             **inputs,
-            **self.config['generate']
+            **self.config['generate'],
+            pad_token_id=self.tokenizer.eos_token_id # supresses a warning message
         )
         #
         # Seperate the response from the instruction
