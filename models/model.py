@@ -14,6 +14,12 @@ class LanguageModel:
         pass
 
     #
+    # Given a dataset, fine-tune the LLM.
+    #
+    def train(self, data : list) -> None:
+        pass
+
+    #
     # Given the system and user prompts as strings, format them
     # into a list of messages formated as dictionaries.
     #
@@ -27,6 +33,11 @@ class LanguageModel:
     #       - messages = [{'role': 'system', 'content': system_prompt},
     #                     {'role': 'user', 'content': user_prompt}]
     #
-    def prompts_to_messages(self, system_prompt : str, user_prompt : str) -> list[dict]:
-        return [{'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': user_prompt}]
+    def prompts_to_messages(self, system_prompt:str, 
+                                  user_prompt:str,
+                                  response:str=None) -> list[dict]:
+        messages = [{'role': 'system', 'content': system_prompt},
+                    {'role': 'user', 'content': user_prompt}]
+        if response is not None:
+            messages.append({'role': 'assistant', 'content': response})
+        return messages

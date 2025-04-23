@@ -1,6 +1,7 @@
 # External imports
+from datasets import Dataset
 import json
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Trainer, TrainingArguments, default_data_collator
 import torch
 
 # Internal imports
@@ -76,4 +77,94 @@ class Mistral(LanguageModel):
         # Return the response
         #
         return response
+    
+    #
+    # Given data, fine-tune the model.
+    #
+    def train(self, data : str) -> None:
+        #
+        # Build a Hugging Face dataset
+        #
+        dataset = Dataset.from_list(data)
+        #
+        # Preprocessing function to help format the chat tokens for training.
+        #
+        def preprocess(example):
+            #
+            # Build the full chat string
+            #
+            full = (
+                "<s>[SYS] " + example["system_prompt"] + " [/SYS]\n"
+                + example["user_prompt"] + " [/INST]\n"
+                + example["response"]
+            )
+            #
+            # Tokenize the full chat string
+            #
+            tokenized = self.tokenizer(
+                full,
+                truncation=True,
+                max_length=1024,
+                padding="max_length",
+            )
+            #
+            # Find the special token that seperates the prompt tokens from the
+            # response token
+            #
+            seperation_idx = tokenized["input_ids"].index(self.tokenizer.eos_token_id, 1)
+            #
+            # Mask out the prompt tokens in the label tokens field.
+            #
+            labels = tokenized["input_ids"].copy()
+            for i in range(seperation_idx + 1):
+                labels[i] = -100
+            tokenized["labels"] = labels
+            #
+            # Return tokenized chat
+            #
+            return tokenized
+        #
+        # Tokenize the dataset
+        #
+        tokenized_ds = dataset.map(
+            preprocess,
+            batched=False,
+            remove_columns=dataset.column_names
+        )
+        #
+        # Set training arguments
+        #
+        training_args = training_args = TrainingArguments(
+            output_dir="./outputs",
+            per_device_train_batch_size=1,     # try 1–2
+            per_device_eval_batch_size=1,
+            gradient_accumulation_steps=1,     # effective batch size ≈ 8
+            num_train_epochs=3,
+            learning_rate=2e-5,
+            warmup_ratio=0.03,                 # ~3% of steps
+            weight_decay=0.01,
+            logging_steps=10,
+            evaluation_strategy="steps",
+            eval_steps=200,
+            save_strategy="steps",
+            save_steps=200,
+            save_total_limit=3,
+            fp16=True,                         # or bf16 if supported
+            optim="adamw_torch",               # the new PyTorch optimizer
+            gradient_checkpointing=True,       # save memory
+            load_best_model_at_end=True,       # if you run eval
+            metric_for_best_model="eval_loss",
+            greater_is_better=False,
+        )
+        #
+        # Train
+        #
+        trainer = Trainer(
+            model=self.model,
+            tokenizer=self.tokenizer,
+            args=training_args,
+            train_dataset=tokenized_ds,
+            data_collator=default_data_collator,
+        )
+
 

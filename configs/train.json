@@ -1,0 +1,5 @@
+{
+    "initial_board": "envs/maze/starting_boards/simple_board.txt",
+    "model_config": "configs/mistral.json",
+    "agent_config": "configs/agent.json"
+}

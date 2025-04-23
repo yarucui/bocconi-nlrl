@@ -53,8 +53,8 @@ class ActorCriticAgent:
         N_ESTIMATE_SAMPLES = 1
         N_ACTION_SAMPLES = 4
         TOP_N_ACTIONS = 4
-        VALUE_BATCH_SIZE = 1
-        POLICY_BATCH_SIZE = 1
+        VALUE_BATCH_SIZE = 'all'
+        POLICY_BATCH_SIZE = 'all'
         KEEP_N_ITER_HISTORY = 1
         #
         # Store value targets and policy targets
@@ -126,17 +126,25 @@ class ActorCriticAgent:
             #
             # Save the value targets from this training iteration to the value buffer.
             #
-            value_buffer.append(value_targets)
-            import ipdb; ipdb.set_trace()
+            value_buffer += value_targets
             #
             # Update the value function using the value targets
             #
-            sample_idxs = np.random.choice(range(len(value_buffer)), size=VALUE_BATCH_SIZE, replace=False)
-            value_targets_batch = [value_buffer[idx][1] for idx in sample_idxs]
-            self.lang_values.update(value_targets_batch)
+            print('+++++++++++++++++++++++++++++')
+            print('STEP 3: TRAIN VALUE MODEL')
+            if VALUE_BATCH_SIZE == 'all':
+                value_targets_batch = [value_buffer[idx][1] for idx in range(len(value_buffer))]
+            else:
+                sample_idxs = np.random.choice(range(len(value_buffer)), size=VALUE_BATCH_SIZE, replace=False)
+                value_targets_batch = [value_buffer[idx][1] for idx in sample_idxs]
+            import ipdb; ipdb.set_trace()
+            self.lang_values.update(value_targets_batch, self.env.actions())
+            import ipdb; ipdb.set_trace()
             #
             # Use the updated value function to improve the policy
             #
+            print('+++++++++++++++++++++++++++++')
+            print('STEP 4: COMPUTE POLICY TARGETS')
             for trajectory in trajectories:
                 for transition in trajectory:
                     state = transition[0]
@@ -168,6 +176,8 @@ class ActorCriticAgent:
             #
             # Update the policy using the policy targets
             #
+            print('+++++++++++++++++++++++++++++')
+            print('STEP 5: TRAIN POLICY MODEL')
             sample_idxs = np.random.choice(range(len(policy_buffer)), size=POLICY_BATCH_SIZE, replace=False)
             policy_targets_batch = [policy_buffer[idx][1] for idx in sample_idxs]
             self.lang_policy.update(policy_targets_batch)

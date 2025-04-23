@@ -28,9 +28,12 @@ class LanguageValueFunction:
 
     #
     # Given a state-action pair and a set of example trajectories, 
-    # return the Monte-Carlo value estimation.
+    # return the LLM's response estimating the Monte-Carlo value.
     #
-    def mc_estimate(self, state, action, actions, trajectory_samples):
+    def mc_estimate(self, state : str, 
+                          action : int, 
+                          actions : dict[int, str], 
+                          trajectory_samples : list[tuple[str, int, float]]) -> str:
         #
         # Describe the given sampled trajectories in text
         #
@@ -54,23 +57,11 @@ class LanguageValueFunction:
         print('Action:', actions[action])
         print()
         #
-        # Extract the action from the LLM response
+        # Verify the response's formatting by extracting the value
+        # and reasoning.
         #
-        value_match = re.search(r'Value:\s*([-+]?\d+(?:\.\d+)?)', response)
-        if value_match:
-            value = float(value_match.group(1))
-        else:
-            raise ValueError(f"Missing value. MC Estimate LLM returned an ill-formatted response. Response:\n'{response}'")
-        #
-        # Extract the reasoning
-        #
-        # The reasoning should always follow the reason identifier, "Reason: "
-        #
-        reason_match = re.search(r"Reason:\s*\n?(.*)", response, re.DOTALL)
-        if reason_match:
-            reason =  str(reason_match.group(1))
-        else:
-            raise ValueError(f"Missing reasoning. Policy LLM return an ill-formatted response. Response:\n'{response}'")
+        value = self.extract_value_from_response(response)
+        reason = self.extract_reason_from_response(response)
         #
         # Log
         #
@@ -81,7 +72,7 @@ class LanguageValueFunction:
         #
         # Otherwise, the selected action is valid.
         #
-        return value, reason
+        return response
 
     #
     # Given a list of trajectories, return a string describing each trajectory.
@@ -112,12 +103,63 @@ class LanguageValueFunction:
         # Return the final description.
         #
         return traj_samples_text
+    
+    #
+    # Given a response from the LLM, extract the value.
+    #
+    def extract_value_from_response(self, response : str) -> float:
+        value_match = re.search(r'Value:\s*([-+]?\d+(?:\.\d+)?)', response)
+        if value_match:
+            value = float(value_match.group(1))
+        else:
+            raise ValueError(f"Missing value. MC Estimate LLM returned an ill-formatted response. Response:\n'{response}'")
+        return value
+
+    #
+    # Given a response form the LLM, extract the reasoning.
+    #
+    def extract_reason_from_response(self, response : str) -> str:
+        reason_match = re.search(r"Reason:\s*\n?(.*)", response, re.DOTALL)
+        if reason_match:
+            reason =  str(reason_match.group(1))
+        else:
+            raise ValueError(f"Missing reasoning. MC Estimate LLM return an ill-formatted response. Response:\n'{response}'")
+        return reason
 
     #
     # Given a batch of target values, update the value function.
     #
-    def update(self, target_values : list[tuple]) -> None:
-        pass
+    #    target_values = [
+    #        (state, action, value),
+    #         ...
+    #    ]
+    #
+    #    where:
+    #       - state = string describing the state
+    #       - action = action id from the environment
+    #       - value = string describing the Monte-Carlo estimate of the state-action pair
+    #
+    def update(self, target_values : list[tuple], actions : dict[int, str]) -> None:
+        #
+        # Format the targets into a list that can be used to create
+        # a Hugging Face dataset object.
+        #
+        # data = [
+        #          {'system_prompt': ..., 'user_prompt': ..., 'response': ...},
+        #           ...
+        #        ]
+        #
+        data = [
+            {
+                'system_prompt': self.system_prompt.format(actions=actions.values()),
+                'user_prompt': self.value_prompt.format(state=state, action=action),
+                'response': value_target
+            } for state, action, value_target in target_values
+        ]
+        #
+        # Train the LLM on the data
+        #
+        self.llm.train(data)
 
     #
     # Given a state-action pair, return the value from the value function

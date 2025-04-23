@@ -12,27 +12,30 @@ if __name__ == "__main__":
     # Parse CLI arguements
     #
     parser = argparse.ArgumentParser(prog='ActorCriticTraining')
-    parser.add_argument('initial_board')
-    parser.add_argument('model_config')
-    parser.add_argument('agent_config')
+    parser.add_argument('train_config')
     args = parser.parse_args()
+    #
+    # Open the train configuration file
+    #
+    with open(args.train_config, 'r') as file:
+        train_config = json.load(file)
     #
     # Initialize the environment
     #
-    env = MazeEnv(args.initial_board)
+    env = MazeEnv(train_config['initial_board'])
     #
-    # Initialize the model
+    # Open the model configuration file and initialize the model object.
     #
-    with open(args.model_config, 'r') as file:
+    with open(train_config['model_config'], 'r') as file:
         model_config = json.load(file)
     if model_config['type'] == 'Mistral':
-        llm = Mistral(args.model_config)
+        llm = Mistral(train_config['model_config'])
     else:
         raise ValueError(f"Unrecognized model type: {model_config['type']}")
     #
     # Initialize the agent
     #
-    agent = ActorCriticAgent(env, llm, args.agent_config)
+    agent = ActorCriticAgent(env, llm, train_config['agent_config'])
     #
     # Run training loop
     #
