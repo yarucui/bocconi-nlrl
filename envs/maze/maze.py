@@ -159,7 +159,7 @@ class MazeEnv(Environment):
         if (
             (new_player_position[0] < 0 or new_player_position[0] >= len(self.grid)) or
             (new_player_position[1] < 0 or new_player_position[1] >= len(self.grid[new_player_position[0]])) or
-            (self.grid[new_player_position[0]][new_player_position[1]] != self.space_char)
+            (self.grid[new_player_position[0]][new_player_position[1]] == self.wall_char)
         ):
             new_player_position = self.player_position # Default to a null action
         #
