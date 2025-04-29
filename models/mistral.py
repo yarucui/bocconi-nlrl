@@ -1,6 +1,7 @@
 # External imports
 from datasets import Dataset
 import json
+from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Trainer, TrainingArguments, default_data_collator
 import torch
 
@@ -30,14 +31,29 @@ class Mistral(LanguageModel):
         self.name = self.config['name']
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.name, 
-            trust_remote_code=True
+            trust_remote_code=True,
         )
-        self.model = AutoModelForCausalLM.from_pretrained(
+        self.tokenizer.add_special_tokens({'pad_token': self.tokenizer.eos_token})
+        
+        base_model = AutoModelForCausalLM.from_pretrained(
             self.name,
             quantization_config=self.bnb_config,
             device_map='auto',
             trust_remote_code=True
         )
+        #
+        # The Mistral model is quantized so we have to use a LoRA adapter.
+        #
+        base_model = prepare_model_for_kbit_training(base_model)
+        lora_config = LoraConfig(
+            r=8,
+            lora_alpha=32,
+            target_modules=["q_proj", "v_proj"],
+            lora_dropout=0.1,
+            bias="none",
+            task_type="CAUSAL_LM"
+        )
+        self.model = get_peft_model(base_model, lora_config)
 
     #
     # Given strings with the user and system prompts, query the LLM
@@ -144,17 +160,14 @@ class Mistral(LanguageModel):
             warmup_ratio=0.03,                 # ~3% of steps
             weight_decay=0.01,
             logging_steps=10,
-            evaluation_strategy="steps",
-            eval_steps=200,
+            eval_strategy="no",
             save_strategy="steps",
             save_steps=200,
             save_total_limit=3,
             fp16=True,                         # or bf16 if supported
             optim="adamw_torch",               # the new PyTorch optimizer
             gradient_checkpointing=True,       # save memory
-            load_best_model_at_end=True,       # if you run eval
-            metric_for_best_model="eval_loss",
-            greater_is_better=False,
+            label_names=["labels"]
         )
         #
         # Train
@@ -166,5 +179,6 @@ class Mistral(LanguageModel):
             train_dataset=tokenized_ds,
             data_collator=default_data_collator,
         )
+        trainer.train()
 
 

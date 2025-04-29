@@ -3,6 +3,9 @@ The given state:
 
 The action to evaluate in this state is to {action}.
 
-Given the following example actions that the player takes in subsequent states.
+The following are examples of game play throughs that could follow this action in this state.
+In your reasoning, start by summarizing each example. We want to select an action that leads 
+to play throughs that reach the goal. Use your summaries of these play throughs as 
+evidence in your reasoning.
 
 {examples}
