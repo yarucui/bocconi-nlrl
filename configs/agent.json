@@ -1,5 +1,4 @@
 {
-    "task_instruction_file": "prompts/task_instruction.txt",
     "policy_config": "configs/policy.json",
     "values_config": "configs/values.json",
     "improvement_config": "configs/improvement.json"

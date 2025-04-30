@@ -69,6 +69,7 @@ class LanguageValueFunction:
         print()
         print('Reason:')
         print(reason)
+        import ipdb; ipdb.set_trace()
         #
         # Otherwise, the selected action is valid.
         #
@@ -95,9 +96,13 @@ class LanguageValueFunction:
                 #
                 # Describe this transition in text.
                 #
+                # NOTE - This reward str needs to be abstracted in the future.
+                #        It only applies to the maze environment.
+                #
+                reward_str = 'The player reached the GOAL!' if reward else ''
                 traj_samples_text += self.transition_description.format(state=state,
                                                                         action=actions[action],
-                                                                        reward=reward)
+                                                                        reward=reward_str)
                 traj_samples_text += '\n'
         #
         # Return the final description.
@@ -164,5 +169,39 @@ class LanguageValueFunction:
     #
     # Given a state-action pair, return the value from the value function
     #
-    def get_value(self, state, action):
-        pass
+    def get_value(self, state: str, action: int, actions: dict[int, str]) -> str:
+        #
+        # Query the LLM with the given state-action pair to get its evaluation
+        #
+        response = self.llm.generate_response(self.system_prompt.format(actions=actions.values()),
+                                              self.value_prompt.format(state=state, 
+                                                                       action=actions[action]))
+        #
+        # Log
+        #
+        print('-------------------')
+        print('--> LLM Value function')
+        print()
+        print('Input state-action pair:')
+        print(state)
+        print()
+        print('Action:', actions[action])
+        print()
+        #
+        # Verify the response's formatting by extracting the value
+        # and reasoning.
+        #
+        value = self.extract_value_from_response(response)
+        reason = self.extract_reason_from_response(response)
+        #
+        # Log
+        #
+        print('Value:', value)
+        print()
+        print('Reason:')
+        print(reason)
+        import ipdb; ipdb.set_trace()
+        #
+        # Otherwise, the selected action is valid.
+        #
+        return response

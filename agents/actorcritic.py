@@ -24,10 +24,6 @@ class ActorCriticAgent:
         with open(agent_config_file, 'r') as file:
             self.config = json.load(file)
         #
-        # Text describing the task to be accomplished.
-        #
-        self.task_instruction = Path(self.config['task_instruction_file']).read_text(encoding='utf-8')
-        #
         # Core components
         #
         self.lang_policy = LanguagePolicy(llm, self.config['policy_config'])
@@ -44,14 +40,21 @@ class ActorCriticAgent:
         # Training hyperparameters
         #
         #   - N_ESTIMATE_SAMPLES - num. of sampled trajectories to estimate the state-action value
+        #
         #   - N_ACTION_SAMPLES - num. of actions to sample to estimate policy action probability
+        #
         #   - TOP_N_ACTIONS - select top N most probable actions to perform the policy update.
+        #                   - 'all' selects all possible actions in the given state.
+        #
         #   - VALUE_BATCH_SIZE - num. of value targets to use per training iteration
+        #
         #   - POLICY_BATCH_SIZE - num. of policy targets to use per training iteration
+        #
         #   - KEEP_N_ITER_HISTORY - num. of training iterations until a target is evicted from its buffer.
         #
+        #
         N_ESTIMATE_SAMPLES = 1
-        N_ACTION_SAMPLES = 4
+        N_ACTION_SAMPLES = 'all'
         TOP_N_ACTIONS = 4
         VALUE_BATCH_SIZE = 'all'
         POLICY_BATCH_SIZE = 'all'
@@ -59,8 +62,8 @@ class ActorCriticAgent:
         #
         # Store value targets and policy targets
         #
-        value_buffer = []  # [(train_idx, (s, a, v), ...]
-        policy_buffer = [] # [(train_idx, (s, policy target, strategic reasoning), ...]
+        value_buffer = []  # [(train_idx, (s, a, v)), ...]
+        policy_buffer = [] # [((train_idx, (s, policy target, strategic reasoning)), ...]
         #
         # Main training loop
         #
@@ -148,38 +151,53 @@ class ActorCriticAgent:
             for trajectory in trajectories:
                 for transition in trajectory:
                     state = transition[0]
+                    self.env.set_state(state)
+                    all_actions = self.env.actions()
                     #
-                    # Sample actions from the policy to estimate
-                    # action probabilities.
+                    # Get a set of actions for the policy improvement operator to consider
+                    # for this state.
                     #
-                    # Recall - the language policy does not directly assign a probability 
-                    #          distribution over the action space.
-                    #
-                    sampled_actions = [self.lang_policy.get_action(state)[0] for _ in range(N_ACTION_SAMPLES)]
-                    #
-                    # Get the top N most frequent actions
-                    #
-                    actions = [action for action, _ in Counter(sampled_actions).most_common(TOP_N_ACTIONS)]
+                    if N_ACTION_SAMPLES == 'all':
+                        #
+                        # Consider all available actions
+                        #
+                        actions = all_actions
+                    else:
+                        #
+                        # Sample actions from the policy to estimate
+                        # action probabilities.
+                        #
+                        # Recall - the language policy does not directly assign a probability 
+                        #          distribution over the action space.
+                        #
+                        sampled_actions = [self.lang_policy.get_action(state, all_actions)[0] for _ in range(N_ACTION_SAMPLES)]
+                        #
+                        # Get the top N most frequent actions
+                        #
+                        actions = [action for action, _ in Counter(sampled_actions).most_common(TOP_N_ACTIONS)]
                     #
                     # Get the value estimates for each action in this state
                     #
-                    values = [self.lang_values.get_value(state, action) for action in actions]
+                    values = [self.lang_values.get_value(state, action, actions) for action in actions]
                     #
                     # Query the language improvement operator to get strategic reasoning text and
                     # a policy target.
                     #
-                    strategic_reasoning, policy_target = self.improvement_op.reason(values, self.task_instruction)
+                    policy_target = self.improvement_op.reason(state, actions, values)
                     #
                     # Store the policy target triplet in the policy buffer.
                     #
-                    policy_buffer.append((train_idx, (state, policy_target, strategic_reasoning)))
+                    policy_buffer.append((train_idx, (state, policy_target)))
             #
             # Update the policy using the policy targets
             #
             print('+++++++++++++++++++++++++++++')
             print('STEP 5: TRAIN POLICY MODEL')
-            sample_idxs = np.random.choice(range(len(policy_buffer)), size=POLICY_BATCH_SIZE, replace=False)
-            policy_targets_batch = [policy_buffer[idx][1] for idx in sample_idxs]
+            if POLICY_BATCH_SIZE == 'all':
+                policy_targets_batch = [policy_buffer[idx][1] for idx in range(len(policy_buffer))]
+            else:
+                sample_idxs = np.random.choice(range(len(policy_buffer)), size=POLICY_BATCH_SIZE, replace=False)
+                policy_targets_batch = [policy_buffer[idx][1] for idx in sample_idxs]
             self.lang_policy.update(policy_targets_batch)
             #
             # Evict old targets

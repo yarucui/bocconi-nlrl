@@ -1,11 +1,10 @@
-The given state:
+The player is here:
 {state}
 
-The action to evaluate in this state is to {action}.
+The player wants to {action}.
 
-The following are examples of game play throughs that could follow this action in this state.
-In your reasoning, start by summarizing each example. We want to select an action that leads 
-to play throughs that reach the goal. Use your summaries of these play throughs as 
-evidence in your reasoning.
+The following are examples of play throughs of the game that could happen after this
+action is taken. Summarize these play throughs and use them as evidence to guide your
+reasoning.
 
 {examples}

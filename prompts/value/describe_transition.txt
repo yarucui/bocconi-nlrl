@@ -1,4 +1,6 @@
-The next state:
+Now they are here:
 {state}
 
-The player takes action {action} and gets reward {reward}.
+The player takes action {action}.
+
+{reward}

@@ -1,4 +1,4 @@
-The given state:
+The player is here:
 {state}
 
-The action to evaluate in this state is to {action}.
+Is it good or bad for the player to {action}?

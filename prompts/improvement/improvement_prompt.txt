@@ -1,0 +1,7 @@
+The player is currently here:
+{state}
+
+His possible actions are {actions}.
+
+Evaluations:
+{evaluations}

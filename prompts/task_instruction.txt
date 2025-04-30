@@ -1,1 +1,0 @@
-Move the player to the goal square.
