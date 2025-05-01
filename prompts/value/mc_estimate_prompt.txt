@@ -1,10 +1,8 @@
+Given the examples:
+{examples}
+
 The player is here:
 {state}
 
-The player wants to {action}.
-
-The following are examples of play throughs of the game that could happen after this
-action is taken. Summarize these play throughs and use them as evidence to guide your
-reasoning.
-
-{examples}
+Should the player move {action}. Summarize the example play throughs and use them as 
+evidence to guide your reasoning. Only provide one value and resoning response.

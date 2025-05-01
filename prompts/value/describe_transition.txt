@@ -1,4 +1,4 @@
-Now they are here:
+Now player is here:
 {state}
 
 The player takes action {action}.

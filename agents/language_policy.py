@@ -56,7 +56,8 @@ class LanguagePolicy:
         # Query the LLM with the given state and actions
         #
         response = self.llm.generate_response(self.system_prompt, 
-                                              self.user_prompt.format(state=state, actions=actions))
+                                              self.user_prompt.format(state=state, 
+                                                                      actions=actions))
         #
         # Log
         #
@@ -102,7 +103,30 @@ class LanguagePolicy:
         return action, reason
 
     #
-    # Given a batch of policy targets, update the policy.
+    # Given a batch of policy targets, update the policy LLM
     #
-    def update(self, policy_targets):
-        pass
+    # policy_targets = [(state, available actions, policy_target),
+    #                    ...]
+    #
+    def update(self, policy_targets: list[tuple[str, str]]) -> None:
+        #
+        # Format the targets into a list that can be used to create
+        # a Hugging Face dataset object.
+        #
+        # data = [
+        #          {'system_prompt': ..., 'user_prompt': ..., 'response': ...},
+        #           ...
+        #        ]
+        #
+        data = [
+            {
+                'system_prompt': self.system_prompt,
+                'user_prompt': self.user_prompt.format(state=state, 
+                                                       actions=actions),
+                'response': policy_target
+            } for state, actions, policy_target in policy_targets
+        ]
+        #
+        # Train the LLM on the policy target data
+        #
+        self.llm.train(data)

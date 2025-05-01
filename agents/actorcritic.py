@@ -187,7 +187,7 @@ class ActorCriticAgent:
                     #
                     # Store the policy target triplet in the policy buffer.
                     #
-                    policy_buffer.append((train_idx, (state, policy_target)))
+                    policy_buffer.append((train_idx, (state, all_actions, policy_target)))
             #
             # Update the policy using the policy targets
             #
