@@ -69,7 +69,7 @@ class LanguageValueFunction:
         print()
         print('Reason:')
         print(reason)
-        import ipdb; ipdb.set_trace()
+        """import ipdb; ipdb.set_trace()"""
         #
         # Otherwise, the selected action is valid.
         #
@@ -176,6 +176,7 @@ class LanguageValueFunction:
         response = self.llm.generate_response(self.system_prompt.format(actions=actions.values()),
                                               self.value_prompt.format(state=state, 
                                                                        action=actions[action]))
+        """
         #
         # Log
         #
@@ -201,6 +202,7 @@ class LanguageValueFunction:
         print('Reason:')
         print(reason)
         import ipdb; ipdb.set_trace()
+        """
         #
         # Otherwise, the selected action is valid.
         #

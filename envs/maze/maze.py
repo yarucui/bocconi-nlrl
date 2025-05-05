@@ -178,7 +178,6 @@ class MazeEnv(Environment):
         #
         reward = int(self.player_position == self.goal_position)
         if reward == 1:
-            print('REWARD REACHED')
             self.terminated = True
         #
         # Return the new state and the observed reward

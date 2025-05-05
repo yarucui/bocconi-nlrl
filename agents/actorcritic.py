@@ -39,8 +39,6 @@ class ActorCriticAgent:
         #
         # Training hyperparameters
         #
-        #   - N_ESTIMATE_SAMPLES - num. of sampled trajectories to estimate the state-action value
-        #
         #   - N_ACTION_SAMPLES - num. of actions to sample to estimate policy action probability
         #
         #   - TOP_N_ACTIONS - select top N most probable actions to perform the policy update.
@@ -53,12 +51,11 @@ class ActorCriticAgent:
         #   - KEEP_N_ITER_HISTORY - num. of training iterations until a target is evicted from its buffer.
         #
         #
-        N_ESTIMATE_SAMPLES = 1
         N_ACTION_SAMPLES = 'all'
         TOP_N_ACTIONS = 4
         VALUE_BATCH_SIZE = 'all'
         POLICY_BATCH_SIZE = 'all'
-        KEEP_N_ITER_HISTORY = 1
+        KEEP_N_ITER_HISTORY = 3
         #
         # Store value targets and policy targets
         #
@@ -83,6 +80,7 @@ class ActorCriticAgent:
                 # Rollout the state to completion
                 #
                 trajectories.append(self.rollout())
+            print(f'Avg. trajectory length:{np.mean([len(trajectory) for trajectory in trajectories])}')
             #
             # Build value estimation targets
             #
@@ -100,7 +98,7 @@ class ActorCriticAgent:
                     # pair using a set of sample trajectories.
                     #
                     sample_trajectories = []
-                    for _ in range(N_ESTIMATE_SAMPLES):
+                    for _ in range(K):
                         #
                         # Set the environment to the given state
                         #
@@ -140,9 +138,7 @@ class ActorCriticAgent:
             else:
                 sample_idxs = np.random.choice(range(len(value_buffer)), size=VALUE_BATCH_SIZE, replace=False)
                 value_targets_batch = [value_buffer[idx][1] for idx in sample_idxs]
-            import ipdb; ipdb.set_trace()
             self.lang_values.update(value_targets_batch, self.env.actions())
-            import ipdb; ipdb.set_trace()
             #
             # Use the updated value function to improve the policy
             #

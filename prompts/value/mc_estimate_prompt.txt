@@ -4,5 +4,6 @@ Given the examples:
 The player is here:
 {state}
 
-Should the player move {action}. Summarize the example play throughs and use them as 
-evidence to guide your reasoning. Only provide one value and resoning response.
+Should the player move {action}? Summarize the example play throughs and use them as 
+evidence to guide your reasoning. ONLY use the information from the examples to guide 
+your reasoning and only provide one value and resoning response.
