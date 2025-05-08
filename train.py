@@ -49,7 +49,11 @@ if __name__ == "__main__":
     #
     # Run training loop
     #
-    agent.train(T=10, N=1, K=1)
+    agent.train(
+        T=train_config['num_train_loops'], 
+        N=train_config['num_trajectories_per_loop'], 
+        K=train_config['num_sample_trajectories_per_mc']
+    )
 
     #
     # Runtime profiler
