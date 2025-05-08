@@ -35,7 +35,7 @@ dependencies:
   - prompt_toolkit=3.0.43
   - pure_eval=0.2.2
   - pygments=2.19.1
-  - python=3.13.2
+  - python=3.10
   - python_abi=3.13
   - sentencepiece=0.2.0
   - sentencepiece-python=0.2.0
