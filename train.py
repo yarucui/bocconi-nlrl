@@ -2,12 +2,22 @@
 import argparse
 import json
 
+import cProfile
+import pstats
+
 # Internal imports
 from agents.actorcritic import ActorCriticAgent
 from envs.maze.maze import MazeEnv
 from models.mistral import Mistral
 
 if __name__ == "__main__":
+    
+    #
+    # Runtime profiler
+    #
+    profiler = cProfile.Profile()
+    profiler.enable()
+
     #
     # Parse CLI arguements
     #
@@ -39,4 +49,17 @@ if __name__ == "__main__":
     #
     # Run training loop
     #
-    agent.train(T=1, N=1, K=1)
+    agent.train(T=10, N=1, K=1)
+
+    #
+    # Runtime profiler
+    #
+    # Load the profiler into pstats
+    stats = pstats.Stats(profiler)
+    profiler.disable()
+    # Simplify file paths for readibility
+    stats.strip_dirs()
+    # Sort by 'tottime percall' (average time per call)
+    stats.sort_stats(pstats.SortKey.TIME)
+    # Print the top 20 functions
+    stats.print_stats(20)

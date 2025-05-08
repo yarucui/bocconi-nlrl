@@ -1,5 +1,6 @@
 # External imports
 from collections import Counter
+from copy import deepcopy
 import json
 import numpy as  np
 from pathlib import Path
@@ -26,9 +27,18 @@ class ActorCriticAgent:
         #
         # Core components
         #
-        self.lang_policy = LanguagePolicy(llm, self.config['policy_config'])
-        self.lang_values = LanguageValueFunction(llm, self.config['values_config'])
-        self.improvement_op = ImprovementOperator(llm, self.config['improvement_config'])
+        self.lang_policy = LanguagePolicy(llm, 
+                                          self.config['policy_config'],
+                                          self.config['throw_formatting_errors']
+        )
+        self.lang_values = LanguageValueFunction(llm, 
+                                                 self.config['values_config'],
+                                                 self.config['throw_formatting_errors']
+        )
+        self.improvement_op = ImprovementOperator(llm, 
+                                                  self.config['improvement_config'],
+                                                  self.config['throw_formatting_errors']
+        )
     
     #
     # Main actor-critic training loop
@@ -70,16 +80,21 @@ class ActorCriticAgent:
             #
             print('+++++++++++++++++++++++++++++')
             print('STEP 1: COLLECT TRAJECTORIES')
-            trajectories = [] # [[(s, a, r), ..], ...]
-            for _ in range(N):
-                #
-                # Initialize the environment to its starting state
-                #
-                self.env.reset()
-                #
-                # Rollout the state to completion
-                #
-                trajectories.append(self.rollout())
+            #
+            # Reset game to its starting position
+            #
+            self.env.reset()
+            #
+            # Create N copies of the environment
+            #
+            envs = [deepcopy(self.env) for _ in range(N)]
+            #
+            # Rollout each enironment and collect the trajectories.
+            #
+            trajectories = self.rollout(envs) # [[(s, a, r), ..], ...]
+            #
+            # Log the average number of states per trajectory.
+            #
             print(f'Avg. trajectory length:{np.mean([len(trajectory) for trajectory in trajectories])}')
             #
             # Build value estimation targets
@@ -90,40 +105,83 @@ class ActorCriticAgent:
             print('+++++++++++++++++++++++++++++')
             print('STEP 2: COMPUTE VALUE TARGETS')
             value_targets = [] # [(s, a, v), ...]
+            #
+            # For Monte-Carlo estimates, we evaluate the state-action
+            # pair using a set of sample trajectories.
+            #
             for trajectory in trajectories:
-                for transition in trajectory:
-                    state, action = transition[0], transition[1]
+                #
+                # Sample K sample trajectories per state-action pair in this trajectory.
+                #
+                sample_trajectories = [[]] * len(trajectory)
+                for _ in range(K):
                     #
-                    # For Monte-Carlo estimates, we evaluate the state-action
-                    # pair using a set of sample trajectories.
+                    # Start with a fresh list of environments
                     #
-                    sample_trajectories = []
-                    for _ in range(K):
-                        #
-                        # Set the environment to the given state
-                        #
-                        self.env.set_state(state)
-                        #
-                        # Start by applying the action in the state
-                        #
-                        _, reward = self.env.act(action)
-                        #
-                        # Combine this with the rest of the rollout
-                        # to sample the rest of the trajectory.
-                        #
-                        sample_trajectories.append([(state, action, reward)] + self.rollout())
+                    self.env.reset()
+                    envs = [deepcopy(self.env) for _ in range(len(trajectory))]
                     #
-                    # Given the example trajectories, evaluate how good or bad
-                    # taking the action is in this state.
+                    # Set each environment to a state visited in the trajectory
                     #
-                    value = self.lang_values.mc_estimate(state, 
-                                                         action, 
-                                                         self.env.actions(), 
-                                                         sample_trajectories)
+                    # Progress each environment's state using the associated action
+                    # that was taken at that step.
                     #
-                    # Save the result.
+                    # Record the reward recieved from this action.
                     #
-                    value_targets.append((train_idx, (state, action, value)))
+                    sa_pairs, trajectory_seeds, action_sets = [], [], []
+                    for step, env in enumerate(envs):
+                        #
+                        # Get the state and action that was taken at this step.
+                        #
+                        state, action, _ = trajectory[step]
+                        #
+                        # Save the state action pair for this transition.
+                        #
+                        sa_pairs.append((state, action))
+                        #
+                        # Set the state
+                        #
+                        env.set_state(state)
+                        #
+                        # Save the set of valid actions in this state
+                        #
+                        action_sets.append(env.actions())
+                        #
+                        # Take the associated action and get the reward
+                        #
+                        _, reward = env.act(action)
+                        #
+                        # Add this transition (state, action, reward)
+                        # as the first transition for each sampled trajectory.
+                        #
+                        trajectory_seeds.append([(state, action, reward)])
+                    #
+                    # Rollout the environments
+                    #
+                    rollouts = self.rollout(envs)
+                    #
+                    # Add the first transition to the front of these rollouts to
+                    # get the full sample trajectory.
+                    #
+                    # Then add the full sampled trajectory to the sample trajectory list.
+                    #
+                    for sa_idx in range(len(trajectory)):
+                        sample_trajectories[sa_idx].append(trajectory_seeds[sa_idx] + rollouts[sa_idx])
+                #
+                # Given the example trajectories, evaluate how good or bad
+                # taking each action is in the given states.
+                #
+                values = self.lang_values.mc_estimate(sa_pairs,
+                                                      action_sets, 
+                                                      sample_trajectories)
+                #
+                # Save the result.
+                #
+                for step in range(len(trajectory)):
+                    value_targets.append(
+                        # (train idx, (state, action, value))
+                        (train_idx, (sa_pairs[step][0], sa_pairs[step][1], values[step]))
+                    )
             #
             # Save the value targets from this training iteration to the value buffer.
             #
@@ -157,7 +215,7 @@ class ActorCriticAgent:
                         #
                         # Consider all available actions
                         #
-                        actions = all_actions
+                        actions = all_actions.keys()
                     else:
                         #
                         # Sample actions from the policy to estimate
@@ -174,7 +232,9 @@ class ActorCriticAgent:
                     #
                     # Get the value estimates for each action in this state
                     #
-                    values = [self.lang_values.get_value(state, action, actions) for action in actions]
+                    states = [state] * len(actions)
+                    action_sets = [self.env.actions()] * len(actions)
+                    values = self.lang_values.get_value(states, actions, action_sets)
                     #
                     # Query the language improvement operator to get strategic reasoning text and
                     # a policy target.
@@ -206,38 +266,54 @@ class ActorCriticAgent:
     # Use the agent's policy to rollout the environment
     # state to completion. Return the observed trajectory.
     #
-    def rollout(self, max_trajectory_length=5):
+    def rollout(self, envs: list[Environment], max_trajectory_length=5) -> list[tuple[str, int, str]]:
         #
         # Store the observed transitions
         #
-        trajectory = []
+        trajectories = [[] for _ in range(len(envs))]
+        #
+        # Number of steps taken thus far.
+        #
+        length = 0
         #
         # Continue to act until the game terminates.
-        # Or we hit the maximum allowed trajectory length
+        # Or we hit the maximum allowed trajectory length.
         #
-        while not self.env.is_terminal() and len(trajectory) < max_trajectory_length:
+        while not all(env.is_terminal() for env in envs) and length < max_trajectory_length:
             #
-            # Get the current state
+            # Get indicies of active environments
             #
-            current_state = self.env.state
+            active_idxs = [idx for idx, env in enumerate(envs) if not env.is_terminal()]
             #
-            # Get the set of actions available in the current state
+            # Get the set of actions available in the current states
             #
-            actions = self.env.actions()
+            action_sets = [envs[i].actions() for i in active_idxs]
+            #
+            # Select an action for each active environment
+            #
+            current_states = [envs[i].state for i in active_idxs]
             #
             # Get an action from our policy given the current state
             #
-            action = self.lang_policy.get_action(current_state, actions)[0]
+            actions, _ = self.lang_policy.get_action(current_states, action_sets)
+            print(actions)
+            print(active_idxs)
             #
-            # Apply the action to the environment to collect a
-            # reward and the next state.
+            # Apply the actions to the environments to collect the
+            # rewards and the next states.
             #
-            _, reward = self.env.act(action)
+            rewards = [envs[env_idx].act(actions[idx])[1] 
+                            for idx, env_idx in enumerate(active_idxs)] 
             #
-            # Store the transition
+            # Add each transition to its trajectory
             #
-            trajectory.append((current_state, action, reward))
+            for idx, env_idx in enumerate(active_idxs):
+                trajectories[env_idx].append((current_states[idx], actions[idx], rewards[idx]))
+            #
+            # Increment the length counter
+            #
+            length += 1
         #
         # Return the observed trajectory
         #
-        return trajectory
+        return trajectories

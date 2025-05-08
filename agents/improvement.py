@@ -7,7 +7,7 @@ import re
 from models.model import LanguageModel
 
 class ImprovementOperator:
-    def __init__(self, llm : LanguageModel, config : str):
+    def __init__(self, llm: LanguageModel, config: str, throw_formatting_errors: bool):
         #
         # LLM to query
         #
@@ -23,6 +23,10 @@ class ImprovementOperator:
         self.system_prompt = Path(self.config['system_prompt']).read_text(encoding='utf-8')
         self.improvement_prompt = Path(self.config['improvement_prompt']).read_text(encoding='utf-8')
         self.evaluation_description = Path(self.config['describe_evaluation']).read_text(encoding='utf-8')
+        #
+        # How to handle ill-formatted responses from the llm
+        #
+        self.throw_formatting_errors = throw_formatting_errors
 
     #
     # Given the state-action pairs for a state and descriptions of their values from the language
@@ -46,7 +50,6 @@ class ImprovementOperator:
         #
         # Log
         #
-        """
         print('-------------------')
         print('--> LLM Policy Improvement Operator')
         print()
@@ -69,8 +72,6 @@ class ImprovementOperator:
         print('Reason:')
         print(reason)
         print()
-        import ipdb; ipdb.set_trace()
-        """
         #
         # Return the response
         #
@@ -116,14 +117,26 @@ class ImprovementOperator:
             action = int(action_match.group(1))
         else:
             #
-            # Failure case - no match found, raise a value error.
+            # Failure case - no match found, raise a value error or pick a random action.
             #
-            raise ValueError(f"Missing action. Improvement Operator LLM returned an ill-formatted response.\n Response:\n'{response}'")
+            message_str = f"Missing action. Improvement Operator LLM returned an ill-formatted response. Response:\n'{response}'"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                action, _ = self.get_random_action(actions)
+                print('WARNING: ' + message_str)
         #
         # Check that the found action id is valid.
         #
+        # If not, either raise an error or pick a random action.
+        #
         if action not in actions.keys():
-            raise ValueError(f"Improvement Operator LLM selected an invalid action. Got {action}. Expected one of these {actions}\n Response: {response}")
+            message_str = f"Improvement Operator LLM selected an invalid action. Got {action}. Expected one of these {actions}\n Response: {response}"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                action, _ = self.get_random_action(actions)
+                print('WARNING: ' + message_str)
         #
         # Return the action id.
         #
@@ -134,7 +147,7 @@ class ImprovementOperator:
     #
     # Raise an error if the reasoning isn't found.
     #
-    def extract_reason_from_response(self, response: str) -> int:
+    def extract_reason_from_response(self, response: str) -> str:
         #
         # Response must contain this pattern.
         #
@@ -146,9 +159,15 @@ class ImprovementOperator:
             reason =  str(reason_match.group(1))
         else:
             #
-            # Failure case - no match found, raise a value error.
+            # Failure case - no match found, raise a value error or set the
+            #                reason to an empty string.
             #
-            raise ValueError(f"Missing reasoning. Policy LLM return an ill-formatted response. Response:\n'{response}'")
+            message_str = f"Missing reasoning. Improvement Operator LLM return an ill-formatted response. Response:\n'{response}'"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                reason = ''
+                print('WARNING: ' + message_str)
         #
         # Return the reasoning string
         #

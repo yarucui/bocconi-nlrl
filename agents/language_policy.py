@@ -1,5 +1,6 @@
 # External imports
 import json
+import numpy as np
 from pathlib import Path
 import re
 
@@ -8,7 +9,7 @@ from models.model import LanguageModel
 
 class LanguagePolicy:
 
-    def __init__(self, llm : LanguageModel, config : str):
+    def __init__(self, llm: LanguageModel, config: str, throw_formatting_errors: bool=False):
         #
         # LLM to query for actions
         #
@@ -22,7 +23,11 @@ class LanguagePolicy:
         # Read the prompts from the files
         #
         self.system_prompt = Path(self.config['system_prompt_file']).read_text(encoding='utf-8')
-        self.user_prompt = Path(self.config['user_prompt_file']).read_text(encoding='utf-8')    
+        self.user_prompt = Path(self.config['user_prompt_file']).read_text(encoding='utf-8')
+        #
+        # How to handle ill-formatted responses from the llm
+        #
+        self.throw_formatting_errors = throw_formatting_errors
 
     #
     # Given a state, return an action from a set of possible actions and
@@ -51,56 +56,129 @@ class LanguagePolicy:
     #           the maze.
     #         """
     #
-    def get_action(self, state : str, actions : dict) -> tuple[int, str]:
+    def get_action(self, states : list[str], action_sets : list[dict]) -> tuple[int, str]:
+        #
+        # Get the prompt batch size
+        #
+        assert len(states) == len(action_sets), "Got a different number of states than action sets"
+        N = len(states) 
+        #
+        # Get the prompts for each state
+        #
+        system_prompts = [self.system_prompt] * len(states)
+        user_prompts = [self.user_prompt.format(state=states[i], 
+                                                actions=action_sets[i]) for i in range(N)]
         #
         # Query the LLM with the given state and actions
         #
-        response = self.llm.generate_response(self.system_prompt, 
-                                              self.user_prompt.format(state=state, 
-                                                                      actions=actions))
+        responses = self.llm.generate_response(system_prompts, user_prompts)
         #
-        # Log
+        # Parse the action and reason from each response
         #
-        print('-------------------')
-        print('--> LLM Policy')
-        print()
-        print('Input state:')
-        print(state)
-        print()
+        actions, reasons = [], []
+        for i in range(N):
+            print('-------------------')
+            print('--> LLM Policy')
+            print()
+            print('Input state:')
+            print(states[i])
+            print()
+            #
+            # Extract the action and resoning from the response
+            #
+            action = self.extract_action_from_response(responses[i], action_sets[i])
+            reason = self.extract_reason_from_response(responses[i])
+            #
+            # Log
+            #
+            print('Action:', action_sets[i][action])
+            print()
+            print('Reason:')
+            print(reason)
+            print()
+            #
+            # Save the action and reasoning to the output lists
+            #
+            actions.append(action)
+            reasons.append(reason)
         #
-        # Extract the action from the LLM response
+        # Return the list of selected actions and their reasonings.
+        #
+        return actions, reasons
+    
+    #
+    # Extract the selected action from the LLM response text.
+    #
+    # Raise an error if the action isn't found or if the extracted
+    # action is not in the given actions dictionary.
+    #
+    def extract_action_from_response(self, response: str, actions: dict[int, str]) -> int:
+        #
+        # Response must contain this pattern
         #
         action_match = re.search(r'Best action:\s*(\d+)', response)
         if action_match:
+            #
+            # Success case - match found.
+            #
             action = int(action_match.group(1))
         else:
-            raise ValueError(f"Missing action. Policy LLM returned an ill-formatted response. Response:\n'{response}'")
+            #
+            # Failure case - no match found, raise a value error or pick a random action.
+            #
+            message_str = f"Missing action. Policy LLM returned an ill-formatted response. Response:\n'{response}'"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                action, _ = self.get_random_action(actions)
+                print('WARNING: ' + message_str)
         #
-        # Extract the reasoning
+        # Check that the found action id is valid.
         #
-        # The reasoning should always follow the reason identifier, "Reason: "
+        # If not, either raise an error or pick a random action.
+        #
+        if action not in actions.keys():
+            message_str = f"Policy LLM selected an invalid action. Got {action}. Expected one of these {actions}\n Response: {response}"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                action, _ = self.get_random_action(actions)
+                print('WARNING: ' + message_str)
+        #
+        # Return the action id.
+        #
+        return action
+
+    #
+    # Extract the reasoning from the LLM response text.
+    #
+    # Raise an error if the reasoning isn't found.
+    #
+    def extract_reason_from_response(self, response: str) -> str:
+        #
+        # Response must contain this pattern.
         #
         reason_match = re.search(r"Reason:\s*\n?(.*)", response, re.DOTALL)
         if reason_match:
+            #
+            # Success case - match found, extract the reasoning string.
+            #
             reason =  str(reason_match.group(1))
         else:
-            raise ValueError(f"Missing reasoning. Policy LLM return an ill-formatted response. Response:\n'{response}'")
+            #
+            # Failure case - no match found, raise a value error or set the
+            #                reason to an empty string.
+            #
+            message_str = f"Missing reasoning. Policy LLM return an ill-formatted response. Response:\n'{response}'"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                reason = ''
+                print('WARNING: ' + message_str)
         #
-        # Check that the selected action is in the given set of possible actions.
+        # Return the reasoning string
         #
-        assert action in actions.keys(), f"Policy LLM selected an invalid action. Got {action}. Expected one of these {actions}"
-        #
-        # Log
-        #
-        print('Action:', actions[action])
-        print()
-        print('Reason:')
-        print(reason)
-        print()
-        #
-        # Otherwise, the selected action is valid.
-        #
-        return action, reason
+        return reason
 
     #
     # Given a batch of policy targets, update the policy LLM
@@ -130,3 +208,9 @@ class LanguagePolicy:
         # Train the LLM on the policy target data
         #
         self.llm.train(data)
+
+    #
+    # Given a list of possible actions, select one randomly and give an empty reason.
+    #
+    def get_random_action(self, actions : dict[int, str]) -> tuple[int, str]:
+        return np.random.choice(list(actions.keys())), ''#

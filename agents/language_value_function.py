@@ -7,7 +7,7 @@ import re
 from models.model import LanguageModel
 
 class LanguageValueFunction:
-    def __init__(self, llm : LanguageModel, config : str):
+    def __init__(self, llm: LanguageModel, config: str, throw_formatting_errors: bool=False):
         #
         # LLM to query for values and MC estimates
         #
@@ -24,56 +24,96 @@ class LanguageValueFunction:
         self.value_prompt = Path(self.config['value_prompt']).read_text(encoding='utf-8')
         self.mc_estimate_prompt = Path(self.config['mc_estimate_prompt']).read_text(encoding='utf-8')
         self.transition_description = Path(self.config['describe_transition']).read_text(encoding='utf-8')
+        #
+        # How to handle ill-formatted responses from the llm
+        #
+        self.throw_formatting_errors = throw_formatting_errors
 
 
     #
-    # Given a state-action pair and a set of example trajectories, 
+    # Given state-action pairs and a set of example trajectories, 
     # return the LLM's response estimating the Monte-Carlo value.
     #
-    def mc_estimate(self, state : str, 
-                          action : int, 
-                          actions : dict[int, str], 
-                          trajectory_samples : list[tuple[str, int, float]]) -> str:
+    def mc_estimate(self, sa_pairs : list[tuple[str, int]],  
+                          action_sets : list[dict[int, str]], 
+                          trajectory_samples_lst : list[list[tuple[str, int, float]]]) -> str:
         #
-        # Describe the given sampled trajectories in text
+        # Get the prompt batch size
         #
-        traj_text = self.trajectories_to_text(actions, trajectory_samples)
+        assert len(sa_pairs) == len(action_sets), "Input batch size mismatch."
+        assert len(sa_pairs) == len(trajectory_samples_lst), "Input batch size mismatch."
+        N = len(sa_pairs)
         #
-        # Query the LLM with the given state-action pair and the example trajectories
+        # Get the prompts for each state-action pair
         #
-        response = self.llm.generate_response(self.system_prompt.format(actions=actions.values()),
-                                              self.mc_estimate_prompt.format(state=state, 
-                                                                             action=actions[action], 
-                                                                             examples=traj_text))
+        system_prompts, user_prompts = [], []
+        for i in range(N):
+            #
+            # Unpack the information for this sa pair.
+            #
+            state, action = sa_pairs[i]
+            action_set = action_sets[i]
+            trajectory_samples = trajectory_samples_lst[i]
+            #
+            # Describe the given sampled trajectories in text
+            #
+            traj_text = self.trajectories_to_text(action_set, trajectory_samples)
+            #
+            # Save the system prompt for this sa pair.
+            #
+            system_prompts.append(self.system_prompt.format(actions=action_set.values()))
+            #
+            # Save the user prompt for this sa pair.
+            #
+            user_prompts.append(
+                self.mc_estimate_prompt.format(
+                    state=state, 
+                    action=action_set[action], 
+                    examples=traj_text
+                )
+            )
         #
-        # Log
+        # Query the LLM with the prompts
         #
-        print('-------------------')
-        print('--> LLM MC Estimate')
-        print()
-        print('Input state-action pair:')
-        print(state)
-        print()
-        print('Action:', actions[action])
-        print()
+        responses = self.llm.generate_response(system_prompts, user_prompts)
         #
-        # Verify the response's formatting by extracting the value
-        # and reasoning.
+        # Verify that each response is formatted correctly.
         #
-        value = self.extract_value_from_response(response)
-        reason = self.extract_reason_from_response(response)
-        #
-        # Log
-        #
-        print('Value:', value)
-        print()
-        print('Reason:')
-        print(reason)
-        """import ipdb; ipdb.set_trace()"""
+        for i in range(N):
+            #
+            # Unpack sa pair info
+            #
+            state, action = sa_pairs[i]
+            action_set = action_sets[i]
+            response = responses[i]
+            #
+            # Log
+            #
+            print('-------------------')
+            print('--> LLM MC Estimate')
+            print()
+            print('Input state-action pair:')
+            print(state)
+            print()
+            print('Action:', action_set[action])
+            print()
+            #
+            # Verify the response's formatting by extracting the value
+            # and reasoning.
+            #
+            value = self.extract_value_from_response(response)
+            reason = self.extract_reason_from_response(response)
+            #
+            # Log
+            #
+            print('Value:', value)
+            print()
+            print('Reason:')
+            print(reason)
         #
         # Otherwise, the selected action is valid.
         #
-        return response
+        return responses
 
     #
     # Given a list of trajectories, return a string describing each trajectory.
@@ -117,7 +157,16 @@ class LanguageValueFunction:
         if value_match:
             value = float(value_match.group(1))
         else:
-            raise ValueError(f"Missing value. MC Estimate LLM returned an ill-formatted response. Response:\n'{response}'")
+            #
+            # Fail case - Either throw an error or pick an arbitrary value of zero.
+            #
+            message_str = f"Missing value. MC Estimate LLM returned an ill-formatted response. Response:\n'{response}'"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                value = 0.0
+                print('WARNING: ' + message_str)
+
         return value
 
     #
@@ -128,7 +177,15 @@ class LanguageValueFunction:
         if reason_match:
             reason =  str(reason_match.group(1))
         else:
-            raise ValueError(f"Missing reasoning. MC Estimate LLM return an ill-formatted response. Response:\n'{response}'")
+            #
+            # Fail case - Either throw an error or return an empty string.
+            #
+            message_str = f"Missing reasoning. MC Estimate LLM return an ill-formatted response. Response:\n'{response}'"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                reason = ''
+                print('WARNING: ' + message_str)
         return reason
 
     #
@@ -169,41 +226,64 @@ class LanguageValueFunction:
     #
     # Given a state-action pair, return the value from the value function
     #
-    def get_value(self, state: str, action: int, actions: dict[int, str]) -> str:
+    def get_value(self, states: list[str], actions: list[int], action_sets: list[dict[int, str]]) -> str:
         #
-        # Query the LLM with the given state-action pair to get its evaluation
+        # Get batch prompt size
         #
-        response = self.llm.generate_response(self.system_prompt.format(actions=actions.values()),
-                                              self.value_prompt.format(state=state, 
-                                                                       action=actions[action]))
-        """
+        assert len(states) == len(actions), "Input list length mismatch"
+        assert len(states) == len(action_sets), "Input list length mismatch"
+        N = len(states)
         #
-        # Log
+        # Get the list of prompts
         #
-        print('-------------------')
-        print('--> LLM Value function')
-        print()
-        print('Input state-action pair:')
-        print(state)
-        print()
-        print('Action:', actions[action])
-        print()
+        system_prompts, user_prompts = [], []
+        for i in range(N):
+            #
+            # Format the system prompt for this state-action pair
+            #
+            system_prompts.append(
+                self.system_prompt.format(actions=action_sets[i].values())
+            )
+            #
+            # Format the user prompt for this state-action pair
+            #
+            user_prompts.append(
+                self.value_prompt.format(state=states[i], 
+                                         action=action_sets[i][actions[i]])
+            )
         #
-        # Verify the response's formatting by extracting the value
-        # and reasoning.
+        # Query the LLM with the batch of prompts
         #
-        value = self.extract_value_from_response(response)
-        reason = self.extract_reason_from_response(response)
+        responses = self.llm.generate_response(system_prompts, user_prompts)
         #
-        # Log
+        # Log and verify the formatting of each response
         #
-        print('Value:', value)
-        print()
-        print('Reason:')
-        print(reason)
-        import ipdb; ipdb.set_trace()
-        """
+        for i in range(N):
+            #
+            # Log
+            #
+            print('-------------------')
+            print('--> LLM Value function')
+            print()
+            print('Input state-action pair:')
+            print(states[i])
+            print()
+            print('Action:', action_sets[i][actions[i]])
+            print()
+            #
+            # Verify the response's formatting by extracting the value
+            # and reasoning.
+            #
+            value = self.extract_value_from_response(responses[i])
+            reason = self.extract_reason_from_response(responses[i])
+            #
+            # Log
+            #
+            print('Value:', value)
+            print()
+            print('Reason:')
+            print(reason)
         #
-        # Otherwise, the selected action is valid.
+        # Return the LLM responses
         #
-        return response
+        return responses
