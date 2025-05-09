@@ -7,4 +7,3 @@
 
 echo “Running on host $(hostname)”
 echo “CUDA_VISIBLE_DEVICES = $CUDA_VISIBLE_DEVICES”
-nvidia-smi
