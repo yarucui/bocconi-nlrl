@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name="train"
 #SBATCH --partition=ai
-#SBATCH --gpus=1
+#SBATCH --gpus=2
 #SBATCH --output=../slurm-out/%x.%j.out   # %x = job-name, %j = job‑ID
 #SBATCH --error=../slurm-err/%x.%j.err
 
