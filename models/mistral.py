@@ -6,9 +6,17 @@ from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, logging, Trainer, TrainingArguments, default_data_collator
 import torch
 from torch.nn import Linear
+import os
 
 # Internal imports
 from models.model import LanguageModel
+
+#
+# Restrict max memory usage to avoid spikes
+#
+# Added due to out-of-memory errors during LoRA
+#
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
 class Mistral(LanguageModel):
     #
@@ -43,7 +51,7 @@ class Mistral(LanguageModel):
         #
         def log_mem():
             free, total = torch.cuda.mem_get_info()
-            print(f'Free: {round(free/1e9, 2)} GB; Total: {round(total/1e9, 1)} GB; Remaining: {round((total-free)/total * 100, 2)}%')
+            print(f'Free: {round(free/1e9, 2)} GB; Total: {round(total/1e9, 1)} GB; Remaining: {round((total-free)/total * 100, 2)}%', flush=True)
         print()
         print('Initial memory:')
         log_mem()
@@ -76,8 +84,41 @@ class Mistral(LanguageModel):
         # DEBUG
         #
         print()
-        print('After loading the model:')
+        print('After loading the model:', flush=True)
         log_mem()
+        
+        
+        #
+        # The Mistral model is quantized so we have to use a LoRA adapter.
+        #
+        base_model = prepare_model_for_kbit_training(base_model)
+
+        #
+        # DEBUG
+        #
+        print()
+        print('After preparing the model:', flush=True)
+        log_mem()
+
+        lora_config = LoraConfig(
+            r=8,
+            lora_alpha=32,
+            target_modules=["q_proj", "v_proj"],
+            lora_dropout=0.1,
+            bias="none",
+            task_type="CAUSAL_LM"
+        )
+        self.model = get_peft_model(base_model, lora_config)
+
+        #
+        # DEBUG
+        #
+        print()
+        print('After peft:', flush=True)
+        log_mem()
+
+        print("Model is on:", next(self.model.parameters()).device)
+        
         print()
         print('Mistral model type:')
         for name, module in base_model.named_modules():
@@ -88,23 +129,6 @@ class Mistral(LanguageModel):
         print()
         print('Device map:', base_model.hf_device_map)
         print()
-        
-        #
-        # The Mistral model is quantized so we have to use a LoRA adapter.
-        #
-        """
-        base_model = prepare_model_for_kbit_training(base_model)
-        lora_config = LoraConfig(
-            r=8,
-            lora_alpha=32,
-            target_modules=["q_proj", "v_proj"],
-            lora_dropout=0.1,
-            bias="none",
-            task_type="CAUSAL_LM"
-        )
-        self.model = get_peft_model(base_model, lora_config)
-        print("Model is on:", next(self.model.parameters()).device)
-        """
 
     #
     # Given strings with the user and system prompts, query the LLM
