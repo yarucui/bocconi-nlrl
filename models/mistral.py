@@ -23,7 +23,7 @@ class Mistral(LanguageModel):
     # Load the model and set the desired configuration parameters.
     #
     def __init__(self, config : str):
-        print('Initializing Mistral')
+        print('Initializing Mistral', flush=True)
         #
         # Load the model configuration
         #
@@ -53,7 +53,7 @@ class Mistral(LanguageModel):
             free, total = torch.cuda.mem_get_info()
             print(f'Free: {round(free/1e9, 2)} GB; Total: {round(total/1e9, 1)} GB; Remaining: {round((total-free)/total * 100, 2)}%', flush=True)
         print()
-        print('Initial memory:')
+        print('Initial memory:', flush=True)
         log_mem()
 
         #
@@ -70,7 +70,7 @@ class Mistral(LanguageModel):
         # DEBUG
         #
         print()
-        print('After loading the tokenizer:')
+        print('After loading the tokenizer:', flush=True)
         log_mem()
 
         base_model = AutoModelForCausalLM.from_pretrained(
@@ -117,17 +117,17 @@ class Mistral(LanguageModel):
         print('After peft:', flush=True)
         log_mem()
 
-        print("Model is on:", next(self.model.parameters()).device)
+        print("Model is on:", next(self.model.parameters()).device, flush=True)
         
         print()
         print('Mistral model type:')
         for name, module in base_model.named_modules():
             if isinstance(module, bnb.nn.Linear4bit):
-                print(f"{name}: 4-bit quantized")
+                print(f"{name}: 4-bit quantized", flush=True)
             elif isinstance(module, Linear):
-                print(f"{name}: Not quantized")
+                print(f"{name}: Not quantized", flush=True)
         print()
-        print('Device map:', base_model.hf_device_map)
+        print('Device map:', base_model.hf_device_map, flush=True)
         print()
 
     #
@@ -135,6 +135,7 @@ class Mistral(LanguageModel):
     # and return the response.
     #
     def generate_response(self, system_prompts : list[str], user_prompts : list[str]) -> list[str]:
+        print('HERE', flush=True)
         #
         # Get prompt batch size
         #

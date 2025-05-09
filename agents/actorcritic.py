@@ -78,8 +78,8 @@ class ActorCriticAgent:
             #
             # Collect trajectories
             #
-            print('+++++++++++++++++++++++++++++')
-            print('STEP 1: COLLECT TRAJECTORIES')
+            print('+++++++++++++++++++++++++++++', flush=True)
+            print('STEP 1: COLLECT TRAJECTORIES', flush=True)
             #
             # Reset game to its starting position
             #
