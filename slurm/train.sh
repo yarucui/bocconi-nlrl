@@ -5,8 +5,12 @@
 #SBATCH --output=../slurm-out/%x.%j.out   # %x = job-name, %j = job‑ID
 #SBATCH --error=../slurm-err/%x.%j.err
 
+module purge
+module load nvidia/cuda-12.4.0
 module load modules/miniconda3
+
 eval "$(conda shell.bash hook)"
+
 conda activate nlrl
 
 echo “Running on host $(hostname)”
