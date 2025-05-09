@@ -32,6 +32,17 @@ class Mistral(LanguageModel):
         self.bnb_config = BitsAndBytesConfig(
             **self.config['bits_and_bytes']
         )
+
+        #
+        # DEBUG
+        #
+        def log_mem():
+            free, total = torch.cuda.mem_get_info()
+            print(f'Free: {round(free/1e9, 2)} GB; Total: {round(total/1e9, 1)} GB; Remaining: {round((total-free)/total * 100, 2)}%')
+        print()
+        print('Initial memory:')
+        log_mem()
+
         #
         # Load the model and tokenizer
         #
@@ -42,9 +53,12 @@ class Mistral(LanguageModel):
         )
         self.tokenizer.add_special_tokens({'pad_token': self.tokenizer.eos_token})
 
-        print('Before loading Mistral:')
-        print(torch.cuda.memory_allocated() / 1e9, "GB allocated")
-        print(torch.cuda.max_memory_allocated() / 1e9, "GB max allocated")
+        #
+        # DEBUG
+        #
+        print()
+        print('After loading the tokenizer:')
+        log_mem()
 
         base_model = AutoModelForCausalLM.from_pretrained(
             self.name,
@@ -52,6 +66,14 @@ class Mistral(LanguageModel):
             device_map='auto',
             trust_remote_code=True
         )
+
+        #
+        # DEBUG
+        #
+        print()
+        print('After loading the model:')
+        log_mem()
+        print()
         print('Mistral model type:')
         for name, module in base_model.named_modules():
             if isinstance(module, bnb.nn.Linear4bit):
@@ -61,9 +83,7 @@ class Mistral(LanguageModel):
         print()
         print('Device map:', base_model.hf_device_map)
         print()
-        print('After loading Mistral:')
-        print(torch.cuda.memory_allocated() / 1e9, "GB allocated")
-        print(torch.cuda.max_memory_allocated() / 1e9, "GB max allocated")
+        
         #
         # The Mistral model is quantized so we have to use a LoRA adapter.
         #
