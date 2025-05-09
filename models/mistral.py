@@ -1,9 +1,11 @@
 # External imports
+import bitsandbytes as bnb
 from datasets import Dataset
 import json
 from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, logging, Trainer, TrainingArguments, default_data_collator
 import torch
+from torch.nn import Linear
 
 # Internal imports
 from models.model import LanguageModel
@@ -13,6 +15,7 @@ class Mistral(LanguageModel):
     # Load the model and set the desired configuration parameters.
     #
     def __init__(self, config : str):
+        print('Initializing Mistral')
         #
         # Load the model configuration
         #
@@ -38,14 +41,29 @@ class Mistral(LanguageModel):
             trust_remote_code=True,
         )
         self.tokenizer.add_special_tokens({'pad_token': self.tokenizer.eos_token})
-        
+
+        print('Before loading Mistral:')
+        print(torch.cuda.memory_allocated() / 1e9, "GB allocated")
+        print(torch.cuda.max_memory_allocated() / 1e9, "GB max allocated")
+
         base_model = AutoModelForCausalLM.from_pretrained(
             self.name,
             quantization_config=self.bnb_config,
             device_map='auto',
             trust_remote_code=True
         )
-        print(base_model.hf_device_map)
+        print('Mistral model type:')
+        for name, module in base_model.named_modules():
+            if isinstance(module, bnb.nn.Linear4bit):
+                print(f"{name}: 4-bit quantized")
+            elif isinstance(module, Linear):
+                print(f"{name}: Not quantized")
+        print()
+        print('Device map:', base_model.hf_device_map)
+        print()
+        print('After loading Mistral:')
+        print(torch.cuda.memory_allocated() / 1e9, "GB allocated")
+        print(torch.cuda.max_memory_allocated() / 1e9, "GB max allocated")
         #
         # The Mistral model is quantized so we have to use a LoRA adapter.
         #
