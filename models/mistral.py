@@ -45,6 +45,7 @@ class Mistral(LanguageModel):
             device_map='auto',
             trust_remote_code=True
         )
+        print(self.model.hf_device_map)
         #
         # The Mistral model is quantized so we have to use a LoRA adapter.
         #
