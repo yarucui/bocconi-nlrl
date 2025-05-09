@@ -28,9 +28,14 @@ class Mistral(LanguageModel):
         #
         # Configure 4-bit quantization to fit in 8GB VRAM
         #
-        self.config['bits_and_bytes']['bnb_4bit_compute_dtype'] = eval(self.config['bits_and_bytes']['bnb_4bit_compute_dtype'])
+        #self.config['bits_and_bytes']['bnb_4bit_compute_dtype'] = eval(self.config['bits_and_bytes']['bnb_4bit_compute_dtype'])
+        #self.bnb_config = BitsAndBytesConfig(
+        #    **self.config['bits_and_bytes']
+        #)
         self.bnb_config = BitsAndBytesConfig(
-            **self.config['bits_and_bytes']
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16
         )
 
         #
