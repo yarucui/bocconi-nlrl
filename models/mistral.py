@@ -92,6 +92,7 @@ class Mistral(LanguageModel):
         #
         # The Mistral model is quantized so we have to use a LoRA adapter.
         #
+        """
         base_model = prepare_model_for_kbit_training(base_model)
         lora_config = LoraConfig(
             r=8,
@@ -103,6 +104,7 @@ class Mistral(LanguageModel):
         )
         self.model = get_peft_model(base_model, lora_config)
         print("Model is on:", next(self.model.parameters()).device)
+        """
 
     #
     # Given strings with the user and system prompts, query the LLM
