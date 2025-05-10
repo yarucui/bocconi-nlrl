@@ -215,7 +215,7 @@ class ActorCriticAgent:
                         #
                         # Consider all available actions
                         #
-                        actions = all_actions.keys()
+                        actions = list(all_actions.keys())
                     else:
                         #
                         # Sample actions from the policy to estimate

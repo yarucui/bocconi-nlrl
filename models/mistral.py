@@ -381,6 +381,7 @@ class Mistral(LanguageModel):
         #  - MAX_TRAIN_RETRIES: Number of times to retry the train block before raising an error.
         #  - retries: Counter to control whether or not we retry the train block.
         #
+        print('Starting training', flush=True)
         MAX_TRAIN_RETRIES = 2
         retries = 0
         #
@@ -402,7 +403,7 @@ class Mistral(LanguageModel):
                 # If the error is an illegal memory access, then retry training.
                 #
                 if 'CUDA error: an illegal memory access was encountered' in msg:
-                    print("WARNING: Caught CUDA illegal memory access. Cleaning up GPU memory...")
+                    print("WARNING: Caught CUDA illegal memory access. Cleaning up GPU memory...", flush=True)
                     torch.cuda.empty_cache()
                     torch.cuda.ipc_collect()
                     retries += 1
@@ -411,6 +412,7 @@ class Mistral(LanguageModel):
                 #
                 else:
                     raise SystemExit(msg)
+        print('Finished training', flush=True)
         #
         # Error case - we exit the loop after too many retries
         #
