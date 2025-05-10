@@ -77,12 +77,12 @@ class LanguagePolicy:
         #
         actions, reasons = [], []
         for i in range(N):
-            print('-------------------')
-            print('--> LLM Policy')
-            print()
-            print('Input state:')
-            print(states[i])
-            print()
+            print('-------------------', flush=True)
+            print('--> LLM Policy', flush=True)
+            print(flush=True)
+            print('Input state:', flush=True)
+            print(states[i], flush=True)
+            print(flush=True)
             #
             # Extract the action and resoning from the response
             #
@@ -91,11 +91,11 @@ class LanguagePolicy:
             #
             # Log
             #
-            print('Action:', action_sets[i][action])
-            print()
-            print('Reason:')
-            print(reason)
-            print()
+            print('Action:', action_sets[i][action], flush=True)
+            print(flush=True)
+            print('Reason:', flush=True)
+            print(reason, flush=True)
+            print(flush=True)
             #
             # Save the action and reasoning to the output lists
             #

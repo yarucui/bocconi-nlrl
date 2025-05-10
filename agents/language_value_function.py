@@ -37,6 +37,7 @@ class LanguageValueFunction:
     def mc_estimate(self, sa_pairs : list[tuple[str, int]],  
                           action_sets : list[dict[int, str]], 
                           trajectory_samples_lst : list[list[tuple[str, int, float]]]) -> str:
+        print('mc_estimate', flush=True)
         #
         # Get the prompt batch size
         #
@@ -89,14 +90,14 @@ class LanguageValueFunction:
             #
             # Log
             #
-            print('-------------------')
-            print('--> LLM MC Estimate')
-            print()
-            print('Input state-action pair:')
-            print(state)
-            print()
-            print('Action:', action_set[action])
-            print()
+            print('-------------------', flush=True)
+            print('--> LLM MC Estimate', flush=True)
+            print(flush=True)
+            print('Input state-action pair:', flush=True)
+            print(state, flush=True)
+            print(flush=True)
+            print('Action:', action_set[action], flush=True)
+            print(flush=True)
             #
             # Verify the response's formatting by extracting the value
             # and reasoning.
@@ -106,10 +107,10 @@ class LanguageValueFunction:
             #
             # Log
             #
-            print('Value:', value)
-            print()
-            print('Reason:')
-            print(reason)
+            print('Value:', value, flush=True)
+            print(flush=True)
+            print('Reason:', flush=True)
+            print(reason, flush=True)
         #
         # Otherwise, the selected action is valid.
         #
