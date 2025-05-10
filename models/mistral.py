@@ -253,6 +253,7 @@ class Mistral(LanguageModel):
     #
     def train(self, data : str) -> None:
         print('Starting training', flush=True)
+        import time; start = time.time()
         #
         # Build a Hugging Face dataset
         #
@@ -277,7 +278,8 @@ class Mistral(LanguageModel):
                 full,
                 truncation=True,
                 padding=True,
-                add_special_tokens=True
+                add_special_tokens=True,
+                max_length=2048,
             )
             #
             # Find the special token that seperates the prompt tokens from the
@@ -303,6 +305,7 @@ class Mistral(LanguageModel):
             batched=False,
             remove_columns=dataset.column_names
         )
+        print('Dataset preprocessing runtime:', time.time()-start)
         #
         # Set training arguments
         #
