@@ -77,7 +77,7 @@ class Mistral(LanguageModel):
         base_model = AutoModelForCausalLM.from_pretrained(
             self.name,
             quantization_config=self.bnb_config,
-            device_map={"": 0},
+            device_map='auto',
             trust_remote_code=True
         )
 
