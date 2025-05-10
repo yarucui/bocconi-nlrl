@@ -166,12 +166,42 @@ class Mistral(LanguageModel):
         # Batch the prompts to the GPU to avoid memory overflows.
         #
         responses = []
-        BATCH_SIZE = 7
-        for i in range(0, len(prompts), BATCH_SIZE):
+        #
+        # Token aware batching, limit the number of tokens in a batch.
+        #
+        MAX_TOKENS_PER_BATCH = 5000
+        i = 0
+        #
+        # For each batch...
+        #
+        while i < N:
+            batch = []
+            tokens_in_batch = 0
             #
-            # Tokenize the prompts
+            # Keep loading prompts into the batch until
+            # the token limit is hit.
             #
-            inputs = self.tokenizer(prompts[i:i+BATCH_SIZE],
+            while i < N:
+                #
+                # Get the token length of this prompt
+                #
+                prompt_token_len = len(self.tokenizer(prompts[i])['input_ids'])
+                #
+                # If adding this prompt to the batch exceeds the token limit,
+                # then move on.
+                #
+                if tokens_in_batch + prompt_token_len > MAX_TOKENS_PER_BATCH:
+                    break
+                #
+                # Else, add the prompt to this batch.
+                #
+                batch.append(prompts[i])
+                tokens_in_batch += prompt_token_len
+                i += 1
+            #
+            # Tokenize the prompts in this batch
+            #
+            inputs = self.tokenizer(batch,
                                     truncation=True, # Truncate prompts that exceed the model's maximum prompt length.
                                     padding=True,
                                     return_tensors='pt').to('cuda')
