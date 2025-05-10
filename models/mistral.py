@@ -135,7 +135,6 @@ class Mistral(LanguageModel):
     # and return the response.
     #
     def generate_response(self, system_prompts : list[str], user_prompts : list[str]) -> list[str]:
-        print('HERE', flush=True)
         #
         # Get prompt batch size
         #
