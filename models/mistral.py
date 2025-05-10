@@ -251,7 +251,7 @@ class Mistral(LanguageModel):
     #
     # Given data, fine-tune the model.
     #
-    def train(self, data : str) -> None:
+    def train(self, data) -> None:
         print('Starting training', flush=True)
         import time; start = time.time()
         #
@@ -277,7 +277,7 @@ class Mistral(LanguageModel):
             tokenized = self.tokenizer(
                 full,
                 truncation=True,
-                padding=True,
+                padding='max_length',
                 add_special_tokens=True,
                 max_length=2048,
             )
@@ -305,7 +305,7 @@ class Mistral(LanguageModel):
             batched=False,
             remove_columns=dataset.column_names
         )
-        print('Dataset preprocessing runtime:', time.time()-start)
+        print('Dataset preprocessing runtime:', time.time()-start, flush=True)
         #
         # Set training arguments
         #
