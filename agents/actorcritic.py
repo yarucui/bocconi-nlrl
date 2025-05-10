@@ -189,8 +189,8 @@ class ActorCriticAgent:
             #
             # Update the value function using the value targets
             #
-            print('+++++++++++++++++++++++++++++')
-            print('STEP 3: TRAIN VALUE MODEL')
+            print('+++++++++++++++++++++++++++++', flush=True)
+            print('STEP 3: TRAIN VALUE MODEL', flush=True)
             if VALUE_BATCH_SIZE == 'all':
                 value_targets_batch = [value_buffer[idx][1] for idx in range(len(value_buffer))]
             else:

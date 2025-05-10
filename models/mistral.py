@@ -252,6 +252,7 @@ class Mistral(LanguageModel):
     # Given data, fine-tune the model.
     #
     def train(self, data : str) -> None:
+        print('Starting training', flush=True)
         #
         # Build a Hugging Face dataset
         #
