@@ -4,6 +4,7 @@ from datasets import Dataset
 import json
 from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, logging, Trainer, TrainingArguments, default_data_collator
+import time
 import torch
 from torch.nn import Linear
 import os
@@ -252,6 +253,7 @@ class Mistral(LanguageModel):
     # Given data, fine-tune the model.
     #
     def train(self, data) -> None:
+        """
         print('Starting training', flush=True)
         import time; start = time.time()
         #
@@ -306,6 +308,36 @@ class Mistral(LanguageModel):
             remove_columns=dataset.column_names
         )
         print('Dataset preprocessing runtime:', time.time()-start, flush=True)
+        """
+        print('Preprocessing...', flush=True)
+        start = time.time()
+
+        # Simple tokenization loop — fast for small datasets
+        tokenized_examples = []
+        for ex in data:
+            full = (
+                "<s>[SYS] " + ex["system_prompt"] + " [/SYS]\n"
+                + ex["user_prompt"] + " [/INST]\n" 
+                + self.tokenizer.eos_token + ex["response"]
+            )
+            tokenized = self.tokenizer(
+                full,
+                truncation=True,
+                padding='max_length',  # Important to avoid dynamic length and fragmentation
+                max_length=2048,
+                add_special_tokens=True,
+            )
+            sep_idx = tokenized["input_ids"].index(self.tokenizer.eos_token_id, 1)
+            labels = tokenized["input_ids"][:]
+            for i in range(sep_idx + 1):
+                labels[i] = -100
+            tokenized["labels"] = labels
+            tokenized_examples.append(tokenized)
+
+        # Convert to HuggingFace Dataset
+        tokenized_ds = Dataset.from_list(tokenized_examples)
+        print('Done preprocessing in', time.time() - start, 'seconds', flush=True)
+        
         #
         # Set training arguments
         #
