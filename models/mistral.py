@@ -208,7 +208,7 @@ class Mistral(LanguageModel):
             inputs = self.tokenizer(batch,
                                     truncation=True, # Truncate prompts that exceed the model's maximum prompt length.
                                     padding=True,
-                                    return_tensors='pt').to('cuda')
+                                    return_tensors='pt')
             #
             # Get the length of each prompt in tokens
             #
