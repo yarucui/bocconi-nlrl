@@ -102,7 +102,6 @@ class ActorCriticAgent:
             #    Compute value estimates for each state-action
             #    pair that was observed during rollouts.
             #
-            """
             print('+++++++++++++++++++++++++++++')
             print('STEP 2: COMPUTE VALUE TARGETS')
             value_targets = [] # [(s, a, v), ...]
@@ -198,7 +197,6 @@ class ActorCriticAgent:
                 sample_idxs = np.random.choice(range(len(value_buffer)), size=VALUE_BATCH_SIZE, replace=False)
                 value_targets_batch = [value_buffer[idx][1] for idx in sample_idxs]
             self.lang_values.update(value_targets_batch, self.env.actions())
-            """
             #
             # Use the updated value function to improve the policy
             #
