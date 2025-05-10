@@ -77,7 +77,7 @@ class Mistral(LanguageModel):
         base_model = AutoModelForCausalLM.from_pretrained(
             self.name,
             quantization_config=self.bnb_config,
-            device_map='auto',
+            device_map={"": 0},
             trust_remote_code=True
         )
 
@@ -208,7 +208,7 @@ class Mistral(LanguageModel):
             inputs = self.tokenizer(batch,
                                     truncation=True, # Truncate prompts that exceed the model's maximum prompt length.
                                     padding=True,
-                                    return_tensors='pt')
+                                    return_tensors='pt').to('cuda')
             #
             # Get the length of each prompt in tokens
             #
