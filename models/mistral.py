@@ -198,6 +198,10 @@ class Mistral(LanguageModel):
                 tokens_in_batch += prompt_token_len
                 i += 1
             #
+            # Log
+            #
+            print('Tokens in batch:', tokens_in_batch, flush=True)
+            #
             # Tokenize the prompts in this batch
             #
             inputs = self.tokenizer(batch,

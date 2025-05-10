@@ -296,8 +296,6 @@ class ActorCriticAgent:
             # Get an action from our policy given the current state
             #
             actions, _ = self.lang_policy.get_action(current_states, action_sets)
-            print(actions)
-            print(active_idxs)
             #
             # Apply the actions to the environments to collect the
             # rewards and the next states.
