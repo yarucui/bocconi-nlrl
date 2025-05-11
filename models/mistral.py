@@ -52,7 +52,7 @@ class Mistral(LanguageModel):
         #
         def log_mem():
             free, total = torch.cuda.mem_get_info()
-            print(f'Free: {round(free/1e9, 2)} GB; Total: {round(total/1e9, 1)} GB; Remaining: {round((total-free)/total * 100, 2)}%', flush=True)
+            print(f'Free: {round(free/1e9, 2)} GB; Total: {round(total/1e9, 1)} GB; Remaining: {round(free/total * 100, 2)}%', flush=True)
         print()
         print('Initial memory:', flush=True)
         log_mem()
@@ -117,16 +117,8 @@ class Mistral(LanguageModel):
         print()
         print('After peft:', flush=True)
         log_mem()
-
-        print("Model is on:", next(self.model.parameters()).device, flush=True)
-        
         print()
-        print('Mistral model type:')
-        for name, module in base_model.named_modules():
-            if isinstance(module, bnb.nn.Linear4bit):
-                print(f"{name}: 4-bit quantized", flush=True)
-            elif isinstance(module, Linear):
-                print(f"{name}: Not quantized", flush=True)
+        print("Model is on:", next(self.model.parameters()).device, flush=True)
         print()
         print('Device map:', base_model.hf_device_map, flush=True)
         print()

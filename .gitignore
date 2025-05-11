@@ -1,3 +1,5 @@
 *.pyc
 __pycache__/
 outputs/
+/models/__pycache__
+/agents/__pycache__

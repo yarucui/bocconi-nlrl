@@ -4,6 +4,7 @@ from copy import deepcopy
 import json
 import numpy as  np
 from pathlib import Path
+import time
 
 # Internal imports
 from envs.environment import Environment
@@ -75,6 +76,7 @@ class ActorCriticAgent:
         # Main training loop
         #
         for train_idx in range(T): # Main training loop
+            start_time = time.time()
             #
             # Collect trajectories
             #
@@ -95,15 +97,20 @@ class ActorCriticAgent:
             #
             # Log the average number of states per trajectory.
             #
-            print(f'Avg. trajectory length:{np.mean([len(trajectory) for trajectory in trajectories])}')
+            print(f'Avg. trajectory length:{np.mean([len(trajectory) for trajectory in trajectories])}', flush=True)
+            #
+            # Log per step runtime
+            #
+            print(f'STEP 1: runtime={round(time.time()-start_time, 1)} sec', flush=True)
             #
             # Build value estimation targets
             #
             #    Compute value estimates for each state-action
             #    pair that was observed during rollouts.
             #
-            print('+++++++++++++++++++++++++++++')
-            print('STEP 2: COMPUTE VALUE TARGETS')
+            start_time = time.time()
+            print('+++++++++++++++++++++++++++++', flush=True)
+            print('STEP 2: COMPUTE VALUE TARGETS', flush=True)
             value_targets = [] # [(s, a, v), ...]
             #
             # For Monte-Carlo estimates, we evaluate the state-action
@@ -187,6 +194,11 @@ class ActorCriticAgent:
             #
             value_buffer += value_targets
             #
+            # Log per step runtime
+            #
+            print(f'STEP 2: runtime={time.time()-start_time} sec', flush=True)
+            start_time = time.time()
+            #
             # Update the value function using the value targets
             #
             print('+++++++++++++++++++++++++++++', flush=True)
@@ -197,6 +209,11 @@ class ActorCriticAgent:
                 sample_idxs = np.random.choice(range(len(value_buffer)), size=VALUE_BATCH_SIZE, replace=False)
                 value_targets_batch = [value_buffer[idx][1] for idx in sample_idxs]
             self.lang_values.update(value_targets_batch, self.env.actions())
+            #
+            # Log the per step runtime
+            #
+            print(f'STEP 3: runtime={time.time()-start_time} sec', flush=True)
+            start_time = time.time()
             #
             # Use the updated value function to improve the policy
             #
@@ -239,11 +256,16 @@ class ActorCriticAgent:
                     # Query the language improvement operator to get strategic reasoning text and
                     # a policy target.
                     #
-                    policy_target = self.improvement_op.reason(state, actions, values)
+                    policy_target = self.improvement_op.reason(state, actions, values, self.env.actions())
                     #
                     # Store the policy target triplet in the policy buffer.
                     #
                     policy_buffer.append((train_idx, (state, all_actions, policy_target)))
+            #
+            # Log per step runtime
+            #
+            print(f'STEP 4: runtime={time.time()-start_time} sec', flush=True)
+            start_time = time.time()
             #
             # Update the policy using the policy targets
             #
@@ -261,6 +283,10 @@ class ActorCriticAgent:
             threshold = train_idx - KEEP_N_ITER_HISTORY
             value_buffer = [target for target in value_buffer if target[0] >= threshold]
             policy_buffer = [target for target in policy_buffer if target[0] >= threshold]
+            #
+            # Log per step runtime
+            #
+            print(f'STEP 5: runtime={time.time()-start_time}', flush=True)
 
     #
     # Use the agent's policy to rollout the environment

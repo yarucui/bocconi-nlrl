@@ -29,24 +29,24 @@ class ImprovementOperator:
         self.throw_formatting_errors = throw_formatting_errors
 
     #
-    # Given the state-action pairs for a state and descriptions of their values from the language
+    # Given state-aciton pairs and descriptions of their values from the language
     # value function, perform chain-of-thought reasoning to determine the best action.
     #
     # Return the strategic reasoning for what's the best action and why.
     #
-    def reason(self, state, actions, values) -> str:
+    def reason(self, state: list[str], actions: list[int], values: list[str], action_set: dict[int, str]) -> str:
         #
         # Format the state-action pair evaluations into a string that can be plugged into
         # the user prompt.
         #
-        evals_text = self.evaluations_to_text(actions, values)
+        evals_text = self.evaluations_to_text(actions, values, action_set)
         #
         # Query the LLM with the state-action pair evaluations
         #
-        response = self.llm.generate_response(self.system_prompt,
-                                              self.improvement_prompt.format(state=state,
-                                                                             actions=actions,
-                                                                             evaluations=evals_text))
+        response = self.llm.generate_response([self.system_prompt],
+                                              [self.improvement_prompt.format(state=state,
+                                                                             actions=action_set,
+                                                                             evaluations=evals_text)])[0]
         #
         # Log
         #
@@ -62,7 +62,7 @@ class ImprovementOperator:
         #
         # Verify the response's formatting by extracting the best action and reasoning.
         #
-        action = self.extract_action_from_response(response, actions)
+        action = self.extract_action_from_response(response, action_set)
         reason = self.extract_reason_from_response(response)
         #
         # Log
@@ -80,20 +80,20 @@ class ImprovementOperator:
     #
     # Format the given state-action pair evaluations into a single string.
     #
-    def evaluations_to_text(self, actions: dict[int, str], values: list[str]) -> str:
+    def evaluations_to_text(self, actions: list[int], values: list[str], action_set: dict[int, str]) -> str:
         #
         # Use the evaluations description to format each 
         # action evaluation into text.
         #
         evaluations_text = ""
-        for i, (action_id, action_str) in enumerate(actions.items()):
+        for action_id, action_eval in zip(actions, values):
             #
             # Add this evaluation to the text.
             #
             evaluations_text += self.evaluation_description.format(action_id=action_id,
-                                                                   action_str=action_str,
-                                                                   evaluation=values[i])
-            evaluations_text += '\n'
+                                                                   action_str=action_set[action_id],
+                                                                   evaluation=action_eval)
+            evaluations_text += '\n\n'
         #
         # Return the final text containing all the evaluations
         #
