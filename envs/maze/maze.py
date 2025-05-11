@@ -22,7 +22,7 @@ class MazeEnv(Environment):
     #
     #     - The walls '#' define the boundaries.
     #
-    def __init__(self, board_file : str):
+    def __init__(self, board_file: str):
         #
         # Save the board file location
         #
@@ -81,6 +81,8 @@ class MazeEnv(Environment):
         # Build the grid
         #
         self.state_to_grid()
+        self.add_grid_labels()
+        self.grid_to_state() # Save the grid labels in the state.
         #
         # Reset the player and goal positions
         #
@@ -90,8 +92,8 @@ class MazeEnv(Environment):
         # Verify the grid is well-formatted and extract the player and
         # goal positions.
         #
-        for i in range(len(self.grid)):
-            for j in range(len(self.grid[i])):
+        for i in range(1, len(self.grid)):
+            for j in range(1, len(self.grid[i])):
                 #
                 # Check for the player
                 #
@@ -207,5 +209,133 @@ class MazeEnv(Environment):
     def grid_to_state(self):
         self.state = ''.join([''.join(line)+'\n' for line in self.grid])
         self.state = self.state[:-1]
+    
+    #
+    # Add row and column lables to the grid
+    #
+    # Before:
+    #
+    # self.grid = [['#', '#', '#', '#', '#'],
+    #              ['#', 'o', ' ', ' ', '#'],
+    #              ['#', ' ', ' ', ' ', '#'],
+    #              ['#', ' ', ' ', 'x', '#'],
+    #              ['#', '#', '#', '#', '#']]
+    #
+    # After:
+    #
+    # self.grid = [[' ', '0', '1', '2', '3', '4'],
+    #              ['0', '#', '#', '#', '#', '#'],
+    #              ['1', '#', 'o', ' ', ' ', '#'],
+    #              ['2', '#', ' ', ' ', ' ', '#'],
+    #              ['3', '#', ' ', ' ', 'x', '#'],
+    #              ['4', '#', '#', '#', '#', '#']]
+    #
+    def add_grid_labels(self) -> None:
+        #
+        # Return if the grid is already labeled.
+        #
+        if self.grid[0][1] == '0' and self.grid[1][0] == '0':
+            return
+        #
+        # Label the rows
+        #
+        grid_width = 0 # Longest row in the grid
+        for row_id in range(len(self.grid)):
+            grid_width = max(grid_width, len(self.grid[row_id]))
+            self.grid[row_id] = [str(row_id)] + self.grid[row_id]
+        #
+        # Label the columns
+        #
+        columns = [' '] + [str(col_id) for col_id in range(grid_width)]
+        self.grid = [columns] + self.grid
+    
+    #
+    # Return a string containing a detailed description of the game state.
+    #
+    def describe_state(self) -> str:
+        #
+        # String to be returned
+        #
+        res = ''
+        #
+        # Add the player's position on the board
+        #
+        py, px = self.player_position[0]-1, self.player_position[1]-1
+        res += f'The player is at position ({px}, {py}).\n'
+        #
+        # Add the goal's position on the board
+        #
+        gy, gx = self.goal_position[0]-1, self.goal_position[1]-1
+        res += f'The goal is at position ({gx}, {gy}).\n\n'
+        #
+        # Add the maze board
+        #
+        res += f'Maze grid:\n{self.state}\n\n'
+        #
+        # Add a description of the player's surroundings
+        #
+        char_word = {self.goal_char: 'the goal.', self.wall_char: 'a wall', self.space_char: 'a free space.'}
+        res += f'Above the player at position ({px}, {py-1}) is {char_word[self.grid[py][px+1]]}\n'
+        res += f'Below the player at position ({px}, {py+1}) is {char_word[self.grid[py+2][px+1]]}\n'
+        res += f'Right of the player at position ({px+1}, {py}) is {char_word[self.grid[py+1][px+2]]}\n'
+        res += f'Left of the player at position ({px-1}, {py}) is {char_word[self.grid[py+1][px]]}\n'
+        #
+        # Return the result
+        #
+        return res
 
-
+    #
+    # Given a trajectory, return a string containing a detailed description of the trajectory.
+    #
+    def describe_trajectory(self, trajectory: list[tuple[str, int, int]]) -> str:
+        #
+        # String to be returned
+        #
+        res = ''
+        #
+        # Set the environment to the start of the trajectory
+        #
+        initial_state, initial_action, _ = trajectory[0]
+        self.set_state(initial_state)
+        #
+        # Start by describing the starting point.
+        #
+        py, px = self.player_position[0]-1, self.player_position[1]-1
+        res += f'The player starts at position ({px}, {py}) and takes action {initial_action} ({self.action_set[initial_action]})'
+        #
+        # Describe the subsequent actions
+        #
+        for state, action, reward in trajectory[1:]:
+            #
+            # Update the environment to the next state 
+            #
+            self.set_state(state)
+            #
+            # Get the updated player coordinates
+            #
+            new_py, new_px = self.player_position[0]-1, self.player_position[1]-1
+            #
+            # Record if the player hit a wall.
+            #
+            if new_px == px and new_py == py:
+                res += ' causing the player to hit a wall and stay in place.\n'
+            #
+            # Otherwise, record the new player location.
+            #
+            else:
+                res += f' moving the player to position ({px}, {py}).\n'
+            #
+            # Record the next action.
+            #
+            res += f'Then, the player takes action {action} ({self.action_set[action]})'
+        #
+        # Record whether or not the goal was reached.
+        #
+        if trajectory[-1][2] != 1:
+            res += f' causing the player to run out of moves.\n'
+        else:
+            res += f' causing the player to reach the goal!'
+        #
+        # Return the resulting string
+        #
+        return res

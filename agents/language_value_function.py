@@ -36,7 +36,7 @@ class LanguageValueFunction:
     #
     def mc_estimate(self, sa_pairs : list[tuple[str, int]],  
                           action_sets : list[dict[int, str]], 
-                          trajectory_samples_lst : list[list[tuple[str, int, float]]]) -> str:
+                          trajectory_samples_lst : list[list[str]]) -> str:
         print('mc_estimate', flush=True)
         #
         # Get the prompt batch size
@@ -58,7 +58,7 @@ class LanguageValueFunction:
             #
             # Describe the given sampled trajectories in text
             #
-            traj_text = self.trajectories_to_text(action_set, trajectory_samples)
+            traj_text = self.trajectories_to_text(action_set, trajectory_samples[i])
             #
             # Save the system prompt for this sa pair.
             #
@@ -73,6 +73,8 @@ class LanguageValueFunction:
                     examples=traj_text
                 )
             )
+            print('user prompt:')
+            print(user_prompts[-1])
         #
         # Query the LLM with the prompts
         #
@@ -125,7 +127,7 @@ class LanguageValueFunction:
         # each trajectory sample into text.
         #
         traj_samples_text = ""
-        for i, trajectory in enumerate(trajectories, 1):
+        for i, traj_description in enumerate(trajectories, 1):
             #
             # Trajectory header to delineate it from other samples.
             #
@@ -133,18 +135,13 @@ class LanguageValueFunction:
             #
             # Add the description of each transition to the trajectory text.
             #
-            for state, action, reward in trajectory:
-                #
-                # Describe this transition in text.
-                #
-                # NOTE - This reward str needs to be abstracted in the future.
-                #        It only applies to the maze environment.
-                #
-                reward_str = 'The player reached the GOAL!' if reward else ''
-                traj_samples_text += self.transition_description.format(state=state,
-                                                                        action=actions[action],
-                                                                        reward=reward_str)
-                traj_samples_text += '\n'
+            #
+            # Describe this transition in text.
+            #
+            # NOTE - This reward str needs to be abstracted in the future.
+            #        It only applies to the maze environment.
+            #
+            traj_samples_text += traj_description
         #
         # Return the final description.
         #

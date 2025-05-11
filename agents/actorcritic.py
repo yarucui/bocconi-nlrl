@@ -185,12 +185,16 @@ class ActorCriticAgent:
                     for sa_idx in range(len(trajectory)):
                         sample_trajectories[sa_idx].append(trajectory_seeds[sa_idx] + rollouts[sa_idx])
                 #
+                # Get the description for each trajectory
+                #
+                sample_traj_descriptions = [[self.env.describe_trajectory(sample_trajectories[i][j]) for j in range(len(sample_trajectories[i]))] for i in range(len(sample_trajectories))]
+                #
                 # Given the example trajectories, evaluate how good or bad
                 # taking each action is in the given states.
                 #
                 values = self.lang_values.mc_estimate(sa_pairs,
                                                       action_sets, 
-                                                      sample_trajectories)
+                                                      sample_traj_descriptions)
                 #
                 # Save the result.
                 #
@@ -333,10 +337,11 @@ class ActorCriticAgent:
             # Select an action for each active environment
             #
             current_states = [envs[i].state for i in active_idxs]
+            state_descriptions = [envs[i].describe_state() for i in active_idxs]
             #
             # Get an action from our policy given the current state
             #
-            actions, _ = self.lang_policy.get_action(current_states, action_sets)
+            actions, _ = self.lang_policy.get_action(state_descriptions, action_sets)
             #
             # Apply the actions to the environments to collect the
             # rewards and the next states.
@@ -375,9 +380,12 @@ class ActorCriticAgent:
         #
         # Count avg reward per step
         #
-        self.avg_reward_per_step.append(
-            np.mean([[reward for _, _, reward in traj] for traj in trajectories])
-        )
+        cumm_reward, n_steps = 0, 0
+        for traj in trajectories:
+            for _, _, reward in traj:
+                cumm_reward += reward
+                n_steps += 1
+        self.avg_reward_per_step.append(cumm_reward / n_steps)
     
     #
     # Print a summary of the stats collected during training.
