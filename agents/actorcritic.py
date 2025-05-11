@@ -40,6 +40,11 @@ class ActorCriticAgent:
                                                   self.config['improvement_config'],
                                                   self.config['throw_formatting_errors']
         )
+        #
+        # Statistics
+        #
+        self.avg_traj_len = [] # per loop
+        self.avg_reward_per_step = [] # per loop
     
     #
     # Main actor-critic training loop
@@ -68,6 +73,10 @@ class ActorCriticAgent:
         POLICY_BATCH_SIZE = 'all'
         KEEP_N_ITER_HISTORY = 3
         #
+        # Reset agent statistics
+        #
+        self.reset_stats()
+        #
         # Store value targets and policy targets
         #
         value_buffer = []  # [(train_idx, (s, a, v)), ...]
@@ -95,8 +104,9 @@ class ActorCriticAgent:
             #
             trajectories = self.rollout(envs) # [[(s, a, r), ..], ...]
             #
-            # Log the average number of states per trajectory.
+            # Update stats
             #
+            self.update_stats(trajectories)
             print(f'Avg. trajectory length:{np.mean([len(trajectory) for trajectory in trajectories])}', flush=True)
             #
             # Log per step runtime
@@ -287,6 +297,11 @@ class ActorCriticAgent:
             # Log per step runtime
             #
             print(f'STEP 5: runtime={time.time()-start_time}', flush=True)
+        #
+        # Print training stat summary
+        #
+        self.print_stat_summary()
+
 
     #
     # Use the agent's policy to rollout the environment
@@ -341,3 +356,38 @@ class ActorCriticAgent:
         # Return the observed trajectory
         #
         return trajectories
+    
+    #
+    # Resets the statistics counters
+    #
+    def reset_stats(self):
+        self.avg_traj_len = []
+        self.avg_reward_per_step = []
+
+    #
+    # Use the given trajectores to update the agent's stats
+    #
+    def update_stats(self, trajectories: list[tuple[str, int, int]]) -> None:
+        #
+        # Count avg trajectory length
+        #
+        self.avg_traj_len.append(np.mean([len(trajectory) for trajectory in trajectories]))
+        #
+        # Count avg reward per step
+        #
+        self.avg_reward_per_step.append(
+            np.mean([[reward for _, _, reward in traj] for traj in trajectories])
+        )
+    
+    #
+    # Print a summary of the stats collected during training.
+    #
+    def print_stat_summary(self):
+        #
+        # For each training iteration, print all the stats.
+        #
+        for it in len(self.avg_traj_len): 
+            print('-------------------------------')
+            print(f'Train iteration #{it}')
+            print(f'  * Avg. trajectory length={self.avg_traj_len[it]}')
+            print(f'  * Avg. reward per step={self.avg_reward_per_step[it]}')
