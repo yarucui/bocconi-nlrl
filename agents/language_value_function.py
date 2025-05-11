@@ -58,7 +58,7 @@ class LanguageValueFunction:
             #
             # Describe the given sampled trajectories in text
             #
-            traj_text = self.trajectories_to_text(action_set, trajectory_samples[i])
+            traj_text = self.trajectories_to_text(action_set, trajectory_samples)
             #
             # Save the system prompt for this sa pair.
             #
@@ -73,8 +73,6 @@ class LanguageValueFunction:
                     examples=traj_text
                 )
             )
-            print('user prompt:')
-            print(user_prompts[-1])
         #
         # Query the LLM with the prompts
         #

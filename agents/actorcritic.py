@@ -130,7 +130,7 @@ class ActorCriticAgent:
                 #
                 # Sample K sample trajectories per state-action pair in this trajectory.
                 #
-                sample_trajectories = [[]] * len(trajectory)
+                sample_trajectories = [[] for _ in range(len(trajectory))]
                 for _ in range(K):
                     #
                     # Start with a fresh list of environments
