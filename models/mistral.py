@@ -245,72 +245,13 @@ class Mistral(LanguageModel):
     # Given data, fine-tune the model.
     #
     def train(self, data) -> None:
-        """
-        print('Starting training', flush=True)
-        import time; start = time.time()
-        #
-        # Build a Hugging Face dataset
-        #
-        dataset = Dataset.from_list(data)
-        #
-        # Preprocessing function to help format the chat tokens for training.
-        #
-        def preprocess(example):
-            #
-            # Build the full chat string
-            #
-            full = (
-                "<s>[SYS] " + example["system_prompt"] + " [/SYS]\n"
-                + example["user_prompt"] + " [/INST]\n" 
-                + self.tokenizer.eos_token # Split the prompt from the response using an eos token.
-                + example["response"]
-            )
-            #
-            # Tokenize the full chat string
-            #
-            tokenized = self.tokenizer(
-                full,
-                truncation=True,
-                padding='max_length',
-                add_special_tokens=True,
-                max_length=2048,
-            )
-            #
-            # Find the special token that seperates the prompt tokens from the
-            # response token
-            #
-            seperation_idx = tokenized["input_ids"].index(self.tokenizer.eos_token_id, 1)
-            #
-            # Mask out the prompt tokens in the label tokens field.
-            #
-            labels = tokenized["input_ids"].copy()
-            for i in range(seperation_idx + 1):
-                labels[i] = -100
-            tokenized["labels"] = labels
-            #
-            # Return tokenized chat
-            #
-            return tokenized
-        #
-        # Tokenize the dataset
-        #
-        tokenized_ds = dataset.map(
-            preprocess,
-            batched=False,
-            remove_columns=dataset.column_names
-        )
-        print('Dataset preprocessing runtime:', time.time()-start, flush=True)
-        """
-        print('Preprocessing...', flush=True)
-        start = time.time()
-
         # Simple tokenization loop — fast for small datasets
         tokenized_examples = []
         for ex in data:
             full = (
-                "<s>[SYS] " + ex["system_prompt"] + " [/SYS]\n"
-                + ex["user_prompt"] + " [/INST]\n" 
-                + self.tokenizer.eos_token + ex["response"]
+                "<s>[INST] <<SYS>>\n" + ex["system_prompt"] + "\n<</SYS>>\n"
+                + ex["user_prompt"] + " [/INST] "
+                + ex["response"] + self.tokenizer.eos_token
             )
             tokenized = self.tokenizer(
                 full,
@@ -328,7 +269,6 @@ class Mistral(LanguageModel):
 
         # Convert to HuggingFace Dataset
         tokenized_ds = Dataset.from_list(tokenized_examples)
-        print('Done preprocessing in', time.time() - start, 'seconds', flush=True)
         
         #
         # Set training arguments
