@@ -263,14 +263,15 @@ class ActorCriticAgent:
                     #
                     # Get the value estimates for each action in this state
                     #
-                    states = [state] * len(actions)
+                    state_description = self.env.describe_state()
+                    state_descriptions = [state_description] * len(actions)
                     action_sets = [self.env.actions()] * len(actions)
-                    values = self.lang_values.get_value(states, actions, action_sets)
+                    values = self.lang_values.get_value(state_descriptions, actions, action_sets)
                     #
                     # Query the language improvement operator to get strategic reasoning text and
                     # a policy target.
                     #
-                    policy_target = self.improvement_op.reason(state, actions, values, self.env.actions())
+                    policy_target = self.improvement_op.reason(state_description, actions, values, self.env.actions())
                     #
                     # Store the policy target triplet in the policy buffer.
                     #
