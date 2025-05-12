@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name="train"
 #SBATCH --partition=ai
-#SBATCH --gpus=2
+#SBATCH --gpus=1
 #SBATCH --output=../slurm-out/%x.%j.out   # %x = job-name, %j = job‑ID
 #SBATCH --error=../slurm-err/%x.%j.err
 
@@ -16,6 +16,6 @@ conda activate nlrl
 echo “Running on host $(hostname)”
 echo “CUDA_VISIBLE_DEVICES = $CUDA_VISIBLE_DEVICES”
 
-accelerate launch train.py configs/train.json > out.txt
+python train.py configs/train.json > out.txt
 
 module purge
