@@ -89,8 +89,9 @@ class ActorCriticAgent:
             #
             # Collect trajectories
             #
-            print('+++++++++++++++++++++++++++++', flush=True)
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             print('STEP 1: COLLECT TRAJECTORIES', flush=True)
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             #
             # Reset game to its starting position
             #
@@ -107,6 +108,7 @@ class ActorCriticAgent:
             # Update stats
             #
             self.update_stats(trajectories)
+            self.print_stat_summary()
             print(f'Avg. trajectory length:{np.mean([len(trajectory) for trajectory in trajectories])}', flush=True)
             #
             # Log per step runtime
@@ -119,8 +121,9 @@ class ActorCriticAgent:
             #    pair that was observed during rollouts.
             #
             start_time = time.time()
-            print('+++++++++++++++++++++++++++++', flush=True)
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             print('STEP 2: COMPUTE VALUE TARGETS', flush=True)
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             value_targets = [] # [(s, a, v), ...]
             #
             # For Monte-Carlo estimates, we evaluate the state-action
@@ -216,8 +219,9 @@ class ActorCriticAgent:
             #
             # Update the value function using the value targets
             #
-            print('+++++++++++++++++++++++++++++', flush=True)
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             print('STEP 3: TRAIN VALUE MODEL', flush=True)
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             if VALUE_BATCH_SIZE == 'all':
                 value_targets_batch = [value_buffer[idx][1] for idx in range(len(value_buffer))]
             else:
@@ -232,8 +236,9 @@ class ActorCriticAgent:
             #
             # Use the updated value function to improve the policy
             #
-            print('+++++++++++++++++++++++++++++')
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             print('STEP 4: COMPUTE POLICY TARGETS')
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             for trajectory in trajectories:
                 for transition in trajectory:
                     state = transition[0]
@@ -285,8 +290,9 @@ class ActorCriticAgent:
             #
             # Update the policy using the policy targets
             #
-            print('+++++++++++++++++++++++++++++')
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             print('STEP 5: TRAIN POLICY MODEL')
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++', flush=True)
             if POLICY_BATCH_SIZE == 'all':
                 policy_targets_batch = [policy_buffer[idx][1] for idx in range(len(policy_buffer))]
             else:
