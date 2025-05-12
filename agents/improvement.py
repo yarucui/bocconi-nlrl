@@ -1,5 +1,6 @@
 # External imports
 import json
+import numpy as np
 from pathlib import Path
 import re
 
@@ -172,3 +173,9 @@ class ImprovementOperator:
         # Return the reasoning string
         #
         return reason
+    
+    #
+    # Given a list of possible actions, select one randomly and give an empty reason.
+    #
+    def get_random_action(self, actions : dict[int, str]) -> tuple[int, str]:
+        return np.random.choice(list(actions.keys())), ''

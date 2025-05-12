@@ -213,4 +213,4 @@ class LanguagePolicy:
     # Given a list of possible actions, select one randomly and give an empty reason.
     #
     def get_random_action(self, actions : dict[int, str]) -> tuple[int, str]:
-        return np.random.choice(list(actions.keys())), ''#
+        return np.random.choice(list(actions.keys())), ''
