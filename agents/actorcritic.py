@@ -402,7 +402,7 @@ class ActorCriticAgent:
         #
         # For each training iteration, print all the stats.
         #
-        for it in len(self.avg_traj_len): 
+        for it in range(len(self.avg_traj_len)): 
             print('-------------------------------')
             print(f'Train iteration #{it}')
             print(f'  * Avg. trajectory length={self.avg_traj_len[it]}')
