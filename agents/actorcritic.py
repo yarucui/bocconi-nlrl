@@ -154,7 +154,8 @@ class ActorCriticAgent:
                         #
                         # Save the state action pair for this transition.
                         #
-                        sa_pairs.append((state, action))
+                        state_description = env.describe_state()
+                        sa_pairs.append((state_description, action))
                         #
                         # Set the state
                         #
