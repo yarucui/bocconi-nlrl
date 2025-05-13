@@ -68,7 +68,7 @@ class ImprovementOperator:
         #
         # Log
         #
-        print('Selected action:', actions[action])
+        print('Action:', action_set[action])
         print()
         print('Reason:')
         print(reason)
