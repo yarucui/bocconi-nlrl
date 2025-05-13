@@ -359,4 +359,10 @@ class Mistral(LanguageModel):
         if retries == MAX_TRAIN_RETRIES:
             raise SystemExit("Fatal CUDA error during training. Please restart the process.")
 
-
+    #
+    # Save the model to disk
+    #
+    def save(self):
+        save_dir = self.config['save_dir']
+        self.model.save_pretrained(save_dir)
+        self.tokenizer.save_pretrained(save_dir)
