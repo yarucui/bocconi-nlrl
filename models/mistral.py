@@ -1,5 +1,6 @@
 # External imports
 import bitsandbytes as bnb
+from copy import copy
 from datasets import Dataset
 import json
 from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
@@ -127,7 +128,7 @@ class Mistral(LanguageModel):
     # Given strings with the user and system prompts, query the LLM
     # and return the response.
     #
-    def generate_response(self, system_prompts : list[str], user_prompts : list[str]) -> list[str]:
+    def generate_response(self, system_prompts : list[str], user_prompts : list[str], temp: float=None) -> list[str]:
         #
         # Get prompt batch size
         #
@@ -207,12 +208,18 @@ class Mistral(LanguageModel):
             input_ids = inputs['input_ids']
             prompt_lens = (input_ids != self.tokenizer.pad_token_id).sum(dim=1)
             #
+            # Adjust temperature if it was passed as a function argument
+            #
+            generate_args = copy(self.config['generate'])
+            if temp is not None:
+                generate_args['temperature'] = temp
+            #
             # Perform the query
             #
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
-                    **self.config['generate'],
+                    **generate_args,
                     pad_token_id=self.tokenizer.eos_token_id # supresses a warning message
                 )
             #
