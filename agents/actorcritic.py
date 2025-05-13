@@ -71,7 +71,7 @@ class ActorCriticAgent:
         TOP_N_ACTIONS = 4
         VALUE_BATCH_SIZE = 'all'
         POLICY_BATCH_SIZE = 'all'
-        KEEP_N_ITER_HISTORY = 3
+        KEEP_N_ITER_HISTORY = 0
         #
         # Reset agent statistics
         #
