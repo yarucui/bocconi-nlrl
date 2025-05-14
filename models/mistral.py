@@ -135,6 +135,18 @@ class Mistral(LanguageModel):
         assert len(system_prompts) == len(user_prompts), "Prompt list length mismatch."
         N = len(system_prompts)
         #
+        # Adjust temperature if it was passed as a function argument
+        #
+        generate_args = copy(self.config['generate'])
+        if temp is not None:
+            if temp != 0:
+                generate_args['temperature'] = temp
+            else:
+                # Can't have a temperature = 0
+                # Instead, we tell the llm to sample deterministicly.
+                del generate_args['temperature']
+                generate_args['do_sample'] = False
+        #
         # Format each system+user prompt pair together
         #
         prompts = []
@@ -208,19 +220,13 @@ class Mistral(LanguageModel):
             input_ids = inputs['input_ids']
             prompt_lens = (input_ids != self.tokenizer.pad_token_id).sum(dim=1)
             #
-            # Adjust temperature if it was passed as a function argument
-            #
-            generate_args = copy(self.config['generate'])
-            if temp is not None:
-                generate_args['temperature'] = temp
-            #
             # Perform the query
             #
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
                     **generate_args,
-                    pad_token_id=self.tokenizer.eos_token_id # supresses a warning message
+                    pad_token_id=self.tokenizer.eos_token_id, # supresses a warning message
                 )
             #
             # Decode the response from the instruction
