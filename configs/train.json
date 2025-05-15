@@ -1,5 +1,5 @@
 {
-    "initial_board": "envs/maze/starting_boards/simpler_board.txt",
+    "initial_board": "envs/negotiation/starting_dialogue/simple_dialogue.txt",
     "model_config": "configs/mistral.json",
     "agent_config": "configs/agent.json",
     "num_train_loops": 5,
