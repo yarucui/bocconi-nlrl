@@ -73,7 +73,7 @@ class LanguagePolicy:
         #
         responses = self.llm.generate_response(system_prompts, user_prompts)
         #
-        # Parse the action and reason from each response
+        # Parse the action and resoning from each response
         #
         actions, reasons = [], []
         for i in range(N):
@@ -116,7 +116,9 @@ class LanguagePolicy:
         #
         # Response must contain this pattern
         #
-        action_match = re.search(r'Best action:\s*(\d+)', response)
+        # action_match = re.search(r'Best action:\s*(\d+)', response)
+        action_match = re.search(r'Your desicion:\s*(\d+)', response)
+
         if action_match:
             #
             # Success case - match found.
@@ -158,7 +160,9 @@ class LanguagePolicy:
         #
         # Response must contain this pattern.
         #
-        reason_match = re.search(r"Reason:\s*\n?(.*)", response, re.DOTALL)
+        # reason_match = re.search(r"Reason:\s*\n?(.*)", response, re.DOTALL)
+        reason_match = re.search(r"Message:\s*\n?(.*)", response, re.DOTALL)
+
         if reason_match:
             #
             # Success case - match found, extract the reasoning string.
@@ -214,3 +218,58 @@ class LanguagePolicy:
     #
     def get_random_action(self, actions : dict[int, str]) -> tuple[int, str]:
         return np.random.choice(list(actions.keys())), ''
+    
+    #
+    # Given a state and action, return the response from the LLM.
+    #
+    def get_message(self, state: str, action: int) -> str:
+        #
+        # Get the prompt for the given state and action
+        #
+        system_prompt = self.system_prompt.format(action=action)
+        prompt = self.user_prompt.format(state=state, actions=action)
+        #
+        # Get the response from the LLM
+        #
+        response = self.llm.generate_response(system_prompt, prompt)
+        #
+        # Extract the message from the response
+        #
+        message = self.extract_message_from_response(response)
+        #
+        # Return the message
+        #
+        return message
+    
+    #
+    # Extract the message from the LLM response text.
+    #
+    # Raise an error if the message isn't found.
+    #
+    def extract_message_from_response(self, response: str) -> str:
+        #
+        # Response must contain this pattern.
+        #
+        message_match = re.search(r"Message:\s*\n?(.*)", response, re.DOTALL)
+
+        if message_match:
+            #
+            # Success case - match found, extract the message string.
+            #
+            message = str(message_match.group(1))
+        else:
+            #
+            # Failure case - no match found, raise a value error or set the
+            #                message to an empty string.
+            #
+            message_str = f"Missing message. Policy LLM returned an ill-formatted response. Response:\n'{response}'"
+            if self.throw_formatting_errors:
+                raise ValueError(message_str)
+            else:
+                message = ''
+                print('WARNING: ' + message_str)
+        #
+        # Return the message string
+        #
+        return message
+    
