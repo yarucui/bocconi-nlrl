@@ -1,0 +1,6 @@
+Now the situation is:
+{state}
+
+The agent takes action {action}.
+
+{reward}

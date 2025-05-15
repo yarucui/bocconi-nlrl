@@ -1,0 +1,4 @@
+The situation is:
+{state}
+
+Is it good or bad for the agent to {action}?

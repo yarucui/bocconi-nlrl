@@ -1,0 +1,6 @@
+state:
+{state}
+Available actions: {actions}
+
+Your turn:
+Choose an action.
